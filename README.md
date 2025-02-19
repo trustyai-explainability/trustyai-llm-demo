@@ -37,6 +37,17 @@ oc apply -f vllm/isvc_qwen2
 ```
 Wait for the model pod to spin up, should look something like `qwen2-predictor-XXXXXX`
 
+You can test the model by sending some inferences to it:
+
+```bash
+oc port-forward $(oc get pods -o name | grep qwen2) 8080:8080
+```
+
+Then, in a new terminal tab:
+```bash
+./curl_model 127.0.0.1:8080 "Hi, can you tell me about yourself?"
+````
+
 ## 4. LM-Eval
 ```bash
 oc apply -f lm-eval/lm-eval-job.yaml
@@ -124,11 +135,13 @@ If everything is okay, it should return:
 
 ### 5.5 Have a play around with Guardrails!
 First, set up:
-`ORCH_GATEWAY=$(oc get routes guardrails-gateway -o jsonpath='{.spec.host}')`
+```bash
+ORCH_GATEWAY=https://$(oc get routes guardrails-gateway -o jsonpath='{.spec.host}')
+```
 
 The available endpoints are:
 
-- `$ORCH_GATEWAY/passthrough`: query the raw, unguardrailed model
+- `$ORCH_GATEWAY/passthrough`: query the raw, unguardrailed model. 
 - `$ORCH_GATEWAY/language_quality`: query with filters for personally identifiable information and HAP
 - `$ORCH_GATEWAY/all`: query with all available filters, so the language filters plus a check against competitor names. 
 

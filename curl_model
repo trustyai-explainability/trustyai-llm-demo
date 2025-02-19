@@ -4,7 +4,7 @@ URL=$1
 PROMPT=$2
 MODEL=qwen2
 
-MESSAGE=$(curl -sk https://$URL/v1/chat/completions  \
+MESSAGE=$(curl -sk $URL/v1/chat/completions  \
    -H "Content-Type: application/json" \
    -d "{
    \"model\": \"${MODEL}\",
