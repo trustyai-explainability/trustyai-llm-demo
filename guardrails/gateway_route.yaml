@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardrails-gateway
+  namespace: model-namespace
+spec:
+  selector:
+    app: guardrails-orchestrator
+    component: guardrails-orchestrator
+  ports:
+    - protocol: TCP
+      port: 8090
+      targetPort: 8090
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: guardrails-gateway
+  namespace: model-namespace
+  labels: {}
+spec:
+  to:
+    kind: Service
+    name: guardrails-gateway
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: ''
+    destinationCACertificate: ''
+  port:
+    targetPort: 8090
+  alternateBackends: []

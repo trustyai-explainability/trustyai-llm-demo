@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-guardrails-hap
+spec:
+  ports:
+    - name: minio-client-port
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+  selector:
+    app: minio-guardrails-hap
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: guardrails-models-claim-hap
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  # storageClassName: gp3-csi
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardrails-container-deployment-hap # <--- change this
+labels:
+    app: minio-guardrails-hap # <--- change this to match label on the pod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-guardrails-hap  # <--- change this to match label on the pod
+  template: # => from here down copy and paste the pods metadata: and spec: sections
+    metadata:
+      labels:
+        app: minio-guardrails-hap
+        maistra.io/expose-route: 'true'
+      name: minio-guardrails-hap
+    spec:
+      volumes:
+      - name: model-volume
+        persistentVolumeClaim:
+          claimName: guardrails-models-claim-hap
+      initContainers:
+        - name: download-model
+          image: quay.io/rgeada/llm_downloader:latest
+          securityContext:
+            fsGroup: 1001
+          command:
+            - bash
+            - -c
+            - |
+              model="ibm-granite/granite-guardian-hap-38m"
+              echo "starting download"
+              /tmp/venv/bin/huggingface-cli download $model --local-dir /mnt/models/huggingface/$(basename $model)
+              echo "Done!"
+          resources:
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+          volumeMounts:
+            - mountPath: "/mnt/models/"
+              name: model-volume
+      containers:
+        - args:
+            - server
+            - /models
+          env:
+            - name: MINIO_ACCESS_KEY
+              value:  THEACCESSKEY
+            - name: MINIO_SECRET_KEY
+              value: THESECRETKEY
+          image: quay.io/trustyai/modelmesh-minio-examples:latest
+          name: minio-guardrails-hap
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - mountPath: "/models/"
+              name: model-volume
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-connection-minio-data-connection-guardrails-hap
+  labels:
+    opendatahub.io/dashboard: 'true'
+    opendatahub.io/managed: 'true'
+  annotations:
+    opendatahub.io/connection-type: s3
+    openshift.io/display-name: Minio Data Connection Guardrails HAP
+data:
+  AWS_ACCESS_KEY_ID: VEhFQUNDRVNTS0VZ
+  AWS_DEFAULT_REGION: dXMtc291dGg=
+  AWS_S3_BUCKET: aHVnZ2luZ2ZhY2U=
+  AWS_S3_ENDPOINT: aHR0cDovL21pbmlvLWd1YXJkcmFpbHMtaGFwOjkwMDA=
+  AWS_SECRET_ACCESS_KEY: VEhFU0VDUkVUS0VZ
+type: Opaque

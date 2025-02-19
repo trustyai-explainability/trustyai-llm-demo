@@ -1,0 +1,44 @@
+kind: DataScienceCluster
+apiVersion: datasciencecluster.opendatahub.io/v1
+metadata:
+  labels:
+    app.kubernetes.io/created-by: rhods-operator
+    app.kubernetes.io/instance: default-dsc
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: datasciencecluster
+    app.kubernetes.io/part-of: rhods-operator
+  name: default-dsc
+spec:
+  components:
+    codeflare:
+      managementState: Managed
+    dashboard:
+      managementState: Managed
+    datasciencepipelines:
+      managementState: Managed
+    kserve:
+      defaultDeploymentMode: RawDeployment
+      managementState: Managed
+      serving:
+        managementState: Removed
+        name: knative-serving
+    kueue:
+      managementState: Managed
+    modelmeshserving:
+      managementState: Managed
+    modelregistry:
+      managementState: Removed
+      registriesNamespace: rhoai-model-registries
+    ray:
+      managementState: Managed
+    trainingoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Managed
+      devFlags:
+        manifests:
+          - contextDir: config
+            sourcePath: ''
+            uri: https://github.com/trustyai-explainability/trustyai-service-operator/tarball/main
+    workbenches:
+      managementState: Managed

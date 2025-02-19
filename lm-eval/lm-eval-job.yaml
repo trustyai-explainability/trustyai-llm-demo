@@ -1,0 +1,29 @@
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: LMEvalJob
+metadata:
+  name: evaljob
+spec:
+  model: local-completions
+  taskList:
+    taskNames:
+      - arc_easy
+  logSamples: true
+  batchSize: '1'
+  allowOnline: true
+  allowCodeExecution: false
+  outputs:
+    pvcManaged:
+      size: 5Gi
+  modelArgs:
+    - name: model
+      value: qwen2
+    - name: base_url
+      value: http://qwen2-predictor:8080/v1/completions
+    - name: num_concurrent
+      value:  "1"
+    - name: max_retries
+      value:  "3"
+    - name: tokenized_requests
+      value: "False"
+    - name: tokenizer
+      value: Qwen/Qwen2.5-0.5B-Instruct
