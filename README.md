@@ -1,5 +1,8 @@
+# TrustyAI Generative Model RHOAI Demo
 
-# 1. Install RHOAI 2.16.1 and all prerequisite operators for a GPU model deployment
+
+
+## 1. Install RHOAI 2.16.1 and all prerequisite operators for a GPU model deployment
 I used:
 - RHOAI 2.16.1
 - Authorino 0.16.0
@@ -10,17 +13,17 @@ I used:
 
 You'll need to [set up your cluster for a GPU deployment](https://github.com/trustyai-explainability/reference/tree/main/llm-deployment/vllm#install-the-gpu-operators)
 
-## KServe Raw
+### KServe Raw
 This demo requires the LLM to be deployed as a [KServe Raw deployment](https://access.redhat.com/solutions/7078183)
 
 1) From RHOAI operator menu, change servicemesh to `Removed` in the DSCI
 
-# 2. Deploy RHOAI
+## 2. Deploy RHOAI
 This will use the latest upstream image of TrustyAI:
 
 `oc apply -f dsc.yaml`
 
-# 3. Deploy Models
+## 3. Deploy Models
 ```bash
 oc new-project model-namespace
 oc apply -f vllm/model_container.yaml
@@ -34,7 +37,7 @@ oc apply -f vllm/isvc_qwen2
 ```
 Wait for the model pod to spin up, should look something like `qwen2-predictor-XXXXXX`
 
-# 4. LM-Eval
+## 4. LM-Eval
 ```bash
 oc apply -f lm-eval/lm-eval-job.yaml
 ```
@@ -56,7 +59,7 @@ inside the lmevaljob's YAML you will see the results of the evaluation, e.g.:
 ```
 
 
-# 5. Guardrails
+## 5. Guardrails
 ### 5.1 Deploy the Hateful And Profane (HAP) language detector
 ```bash
 oc apply -f guardrails/hap_detector/hap_model_container.yaml
@@ -146,5 +149,6 @@ Some cool queries to try:
 
 
 
-# More information
-[TrustyAI Notes Repo](https://github.com/trustyai-explainability/reference/tree/main)
+## More information
+- [TrustyAI Notes Repo](https://github.com/trustyai-explainability/reference/tree/main)
+- [TrustyAI Github](https://github.com/trustyai-explainability)
