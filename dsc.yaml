@@ -11,11 +11,11 @@ metadata:
 spec:
   components:
     codeflare:
-      managementState: Managed
+      managementState: Removed
     dashboard:
       managementState: Managed
     datasciencepipelines:
-      managementState: Managed
+      managementState: Removed
     kserve:
       defaultDeploymentMode: RawDeployment
       managementState: Managed
@@ -23,14 +23,14 @@ spec:
         managementState: Removed
         name: knative-serving
     kueue:
-      managementState: Managed
+      managementState: Removed
     modelmeshserving:
-      managementState: Managed
+      managementState: Removed
     modelregistry:
       managementState: Removed
       registriesNamespace: rhoai-model-registries
     ray:
-      managementState: Managed
+      managementState: Removed
     trainingoperator:
       managementState: Removed
     trustyai:
@@ -39,6 +39,6 @@ spec:
         manifests:
           - contextDir: config
             sourcePath: ''
-            uri: https://github.com/trustyai-explainability/trustyai-service-operator/tarball/main
+            uri: https://api.github.com/repos/trustyai-explainability/trustyai-service-operator/tarball/latest
     workbenches:
-      managementState: Managed
+      managementState: Removed

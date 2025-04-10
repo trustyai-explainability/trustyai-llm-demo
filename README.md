@@ -1,7 +1,5 @@
 # TrustyAI Generative Model RHOAI Demo
 
-
-
 ## 1. Install RHOAI 2.16.1 and all prerequisite operators for a GPU model deployment
 I used:
 - RHOAI 2.16.1
@@ -28,50 +26,28 @@ This will use the latest upstream image of TrustyAI:
 oc new-project model-namespace
 oc apply -f vllm/model_container.yaml
 ```
-The model container can take a while to spin up- it's downloading a [Qwen2](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct)
+The model container can take a while to spin up- it's downloading a [Phi-3-mini](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct)
 from Huggingface and saving it into an emulated AWS data connection.
 
 ```bash
-oc apply -f vllm/serving_runtime.yaml
-oc apply -f vllm/isvc_qwen2
+oc apply -f vllm/phi3.yaml
 ```
-Wait for the model pod to spin up, should look something like `qwen2-predictor-XXXXXX`
+Wait for the model pod to spin up, should look something like `phi3-predictor-XXXXXX`
 
 You can test the model by sending some inferences to it:
 
 ```bash
-oc port-forward $(oc get pods -o name | grep qwen2) 8080:8080
+oc port-forward $(oc get pods -o name | grep phi3) 8080:8080
 ```
 
 Then, in a new terminal tab:
 ```bash
-./curl_model 127.0.0.1:8080 "Hi, can you tell me about yourself?"
+python3 prompt.py --url http://localhost:8080 --model phi3 --message "Hi, can you tell me about yourself?"
 ````
 
-## 4. LM-Eval
-```bash
-oc apply -f lm-eval/lm-eval-job.yaml
-```
-This will download [the Arc dataset](https://huggingface.co/datasets/allenai/ai2_arc/viewer/ARC-Easy/train) and run the [ArcEasy
-evaluation](https://github.com/opendatahub-io/lm-evaluation-harness/tree/main/lm_eval/tasks/arc).
 
-You should see an `evaljob` pod spin up in your cluster. This eval job should take ~5 minutes to run. 
-Afterwards, you can navigate to the lmevaljob resource (Home -> Search -> Search for "LMEvalJob" -> Click evaljob)-
-inside the lmevaljob's YAML you will see the results of the evaluation, e.g.:
-```json
-      "results": {
-        "arc_easy": {
-          "alias": "arc_easy",
-          "acc,none": 0.6561447811447811,
-          "acc_stderr,none": 0.009746660584852454,
-          "acc_norm,none": 0.5925925925925926,
-          "acc_norm_stderr,none": 0.010082326627832872
-        }
-```
-
-
-## 5. Guardrails
-### 5.1 Deploy the Hateful And Profane (HAP) language detector
+## 4. Guardrails
+### 4.1 Deploy the Hateful And Profane (HAP) language detector
 ```bash
 oc apply -f guardrails/hap_detector/hap_model_container.yaml
 ```
@@ -83,10 +59,10 @@ oc apply -f guardrails/hap_detector/hap_isvc.yaml
 ```
 Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
 
-### 5.2 Configure the Guardrails orchestrator
-In 'gaurdrails/configmap_orchestrator.yaml', set the following values:
-- `chat_generation.service.hostname`: Set this to the name of your Qwen2 predictor service. On my cluster, that's 
-`qwen2-predictor.model-namespace.svc.cluster.local`
+### 4.2 Configure the Guardrails orchestrator
+In 'guardrails/configmap_orchestrator.yaml', set the following values:
+- `chat_generation.service.hostname`: Set this to the name of your Phi-e predictor service. On my cluster, that's 
+`phi3-predictor.model-namespace.svc.cluster.local`
 - `detectors.hap.service.hostname`: Set this to the name of your HAP predictor service. On my cluster, that's `guardrails-detector-ibm-hap-predictor.model-namespace.svc.cluster.local`
 
 Then apply the configs:
@@ -136,7 +112,8 @@ If everything is okay, it should return:
 ### 5.5 Have a play around with Guardrails!
 First, set up:
 ```bash
-ORCH_GATEWAY=https://$(oc get routes guardrails-gateway -o jsonpath='{.spec.host}')
+GUARDRAILS_GATEWAY=https://$(oc get routes guardrails-gateway -o jsonpath='{.spec.host}')
+RAW_MODEL=http://localhost:8080
 ```
 
 The available endpoints are:
@@ -147,19 +124,33 @@ The available endpoints are:
 
 
 Some cool queries to try:
+```bash
+python3 prompt.py --url $RAW_MODEL/v1/chat/completions --model phi3 --message "Is orange juice good?"
 ```
-./curl_model $ORCH_GATEWAY/passthrough "Write three paragraphs about morons"
-
-./curl_model $ORCH_GATEWAY/language_quality "Write three paragraphs about morons"
-
-./curl_model $ORCH_GATEWAY/language_quality "My email address is abc@def.com"
-
-./curl_model $ORCH_GATEWAY/all "Can you compare Intel and Nvidia's semiconductor offerings?"
-
-./curl_model $ORCH_GATEWAY/language_quality "Can you compare Intel and Nvidia's semiconductor offerings?"
-
+Returns: 
+```
+Orange juice is generally considered good, especially when it's freshly squeezed. It's a rich source of vitamin C, which is essential for a healthy immune system. It also contains other nutrients like potassium, folate, and antioxidants. However, the quality of orange juice can vary depending on the brand and whether it's freshly squeezed or from concentrate. It's always best to check the label for added sugars and preservatives.
 ```
 
+```bash
+python3 prompt.py --url $ORCH_GATEWAY/all/v1/chat/completions --model phi3 --message "Is orange juice good?"
+```
+Returns: 
+```
+Warning: Unsuitable input detected. Please check the detected entities on your input and try again with the unsuitable input removed.
+Input Detections:
+   0) The regex_competitor detector flagged the following text: "orange"
+```
+
+```bash
+python3 prompt.py --url $ORCH_GATEWAY/all/v1/chat/completions --model phi3 --message "Write three paragraphs about morons"
+```
+Returns: 
+```
+Warning: Unsuitable input detected. Please check the detected entities on your input and try again with the unsuitable input removed.
+Input Detections:
+   0) The regex_competitor detector flagged the following text: "orange"
+```
 
 
 ## More information

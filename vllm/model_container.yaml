@@ -56,8 +56,8 @@ spec:
             - -c
             - |
               models=(
-                "Qwen/Qwen2.5-0.5B-Instruct" 
-                #"microsoft/Phi-3-mini-4k-instruct"
+                microsoft/Phi-3-mini-4k-instruct
+                # "microsoft/phi-4"
               )
               echo "Starting download"
               for model in "${models[@]}"; do

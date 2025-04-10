@@ -11,26 +11,24 @@ data:
       host: "localhost"
       port: 8032
     detectors:
-      - name: regex_language
-        detector_params:
-          regex:
-            - email
-            - ssn
       - name: regex_competitor
+        input: true
+        output: true
         detector_params:
           regex:    
-            - \b(?i:nvidia|amd|intel)\b
+            - \b(?i:orange|apple|cranberry|pineapple|grape)\b
       - name: hap
+        input: true
+        output: true
         detector_params: {}
     routes:
       - name: all
         detectors:
-          - regex_language
           - regex_competitor
           - hap
-      - name: language_quality
+      - name: hap
         detectors:
-          - regex_language
           - hap
+        fallback_message: "I'm sorry, I cannot help with that."
       - name: passthrough
         detectors:

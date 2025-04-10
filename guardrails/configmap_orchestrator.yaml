@@ -6,17 +6,10 @@ data:
   config.yaml: |
     chat_generation:
       service:
-        hostname: qwen2-predictor.model-namespace.svc.cluster.local
+        hostname: phi3-predictor.model-namespace.svc.cluster.local
         port: 8080
     detectors:
       regex_competitor:
-        type: text_contents
-        service:
-            hostname: "127.0.0.1"
-            port: 8080
-        chunker_id: whole_doc_chunker
-        default_threshold: 0.5
-      regex_language:
         type: text_contents
         service:
             hostname: "127.0.0.1"
