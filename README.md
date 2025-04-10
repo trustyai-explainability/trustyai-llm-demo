@@ -60,7 +60,7 @@ oc apply -f guardrails/hap_detector/hap_isvc.yaml
 Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
 
 
-### Configure the Guardrails Orchestrator
+### 4.2) Configure the Guardrails Orchestrator
 
 ```yaml
   config.yaml: |
@@ -91,14 +91,14 @@ deployment (`phi3-predictor.model-namespace.svc.cluster.local`), while our regex
 be the case when using the regex detector sidecar. 
 
 
-### 4.2 Configure our regex detector
+### 4.3) Configure our regex detector
 To filter out converstations about our rival juice vendors, we'll use the following regex pattern:
 ```regexp
 \b(?i:apple|cranberry|grape|orange|pineapple|)\b
 ```
 This will flag anything that matches that regex pattern as a detection- in this case, any mention of the words `apple`, `cranberry`, `grape`, `orange`, or `pineapple` regardless of case.
 
-### 4.3 Configure the Guardrails Gateway
+### 4.4) Configure the Guardrails Gateway
 The guardrails gateway provides two main features:
 1) It provides the OpenAI `v1/chat/completions` API, which lets you hotswap between unguardrailed and guardrailed models
 2) It lets you create guardrail "presets" baked into the endpoint.
@@ -145,7 +145,7 @@ oc apply -f guardrails/configmap_vllm_gateway.yaml
 ```
 You can see the full configmap [here](guardrails/configmap_vllm_gateway.yaml).
 
-### 4.3 Configure the Guardrails orchestrator
+### 4.5) Configure the Guardrails orchestrator
 In 'guardrails/configmap_orchestrator.yaml', set the following values:
 - `chat_generation.service.hostname`: Set this to the name of your Phi-e predictor service. On my cluster, that's 
 `phi3-predictor.model-namespace.svc.cluster.local`
@@ -164,12 +164,12 @@ Right now, the TrustyAI operator does not yet automatically create a route to th
 oc apply -f guardrails/gateway_route.yaml
 ```
 
-### 4.4 Deploy the Orchestrator
+### 4.6) Deploy the Orchestrator
 ```bash
 oc apply -f guardrails/orchestrator_cr.yaml
 ```
 
-### 4.5 Check the Orchestrator Health
+### 4.7) Check the Orchestrator Health
 ```bash
 ORCH_ROUTE_HEALTH=$(oc get routes guardrails-orchestrator-health -o jsonpath='{.spec.host}')
 curl -s https://$ORCH_ROUTE_HEALTH/info | jq
