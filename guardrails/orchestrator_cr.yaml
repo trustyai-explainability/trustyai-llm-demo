@@ -4,5 +4,7 @@ metadata:
   name: guardrails-orchestrator
 spec:
   orchestratorConfig: "fms-orchestr8-config-nlp"
-  vllmGatewayConfig: "fms-orchestr8-config-gateway"
+  enableGuardrailsGateway: true
+  guardrailsGatewayConfig: "fms-orchestr8-config-gateway"
+  enableBuiltInDetectors: true
   replicas: 1
