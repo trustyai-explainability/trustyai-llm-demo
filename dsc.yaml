@@ -35,10 +35,5 @@ spec:
       managementState: Removed
     trustyai:
       managementState: Managed
-      devFlags:
-        manifests:
-          - contextDir: config
-            sourcePath: ''
-            uri: https://api.github.com/repos/trustyai-explainability/trustyai-service-operator/tarball/latest
     workbenches:
       managementState: Removed
