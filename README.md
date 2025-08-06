@@ -49,7 +49,7 @@ In the following section, we'll walk through the configurations that have been p
 
 *If you want to skip the explanations and get straight to playing around, you can run:*
 ```bash
-oc apply -f guardrails/*.yaml
+for file in guardrails/*.yaml; oc apply -f $file
 ```
 
 ### 4.1 Deploy the Hateful And Profane (HAP) language detector
