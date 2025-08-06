@@ -35,5 +35,10 @@ spec:
       managementState: Removed
     trustyai:
       managementState: Managed
+      devFlags:
+        manifests:
+          - contextDir: config
+            sourcePath: ''
+            uri: https://github.com/robgeada/trustyai-service-operator/tarball/LemonadeStandDemo
     workbenches:
       managementState: Removed
