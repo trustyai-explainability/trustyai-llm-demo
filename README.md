@@ -222,6 +222,7 @@ Some cool queries to try:
 python3 prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
    --model phi3 \
+   --max_tokens 250 \
    --message "Is orange juice good?"
 ```
 Returns: 
@@ -234,6 +235,7 @@ Orange juice is generally considered good, especially when it's freshly squeezed
 python3 prompt.py \
   --url $GUARDRAILS_GATEWAY/passthrough/v1/chat/completions \
    --model phi3 \
+   --max_tokens 250 \
    --message "Is orange juice good?"
 ```
 Returns: 
@@ -246,6 +248,7 @@ Orange juice is generally considered good, especially when it's freshly squeezed
 python3 prompt.py \ 
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
    --model phi3 \
+   --max_tokens 250 \
    --message "Is orange juice good?"
 ```
 Returns: 
@@ -261,6 +264,7 @@ Input Detections:
 python3 prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
    --model phi3  \
+   --max_tokens 250 \
    --message "Lemonade is disgusting"
 ```
 Returns: 
@@ -273,6 +277,7 @@ As an AI, I don't have personal opinions or taste preferences. However, I unders
 python3 prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
    --model phi3 \
+   --max_tokens 250 \
    --message "Lemonade is disgusting"
 ```
 Returns: 
@@ -288,6 +293,7 @@ Input Detections:
 python3 prompt.py \ 
   --url $RAW_MODEL/v1/chat/completions \
    --model phi3 \
+   --max_tokens 250 \
    --message "Can you list some healthy fruit juices?"
 ```
 Returns: 
@@ -317,6 +323,7 @@ Certainly! Here are some healthy fruit juices that are rich in vitamins and anti
 python3 prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
    --model phi3 \
+   --max_tokens 250 \
    --message "Can you list some healthy fruit juices?"
 ```
 Returns: 
