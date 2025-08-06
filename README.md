@@ -61,8 +61,7 @@ oc apply -f guardrails/hap_detector/hap_model_container.yaml
 Wait for the `guardrails-container-deployment-hap-xxxx` pod to spin up
 
 ```bash
-oc apply -f guardrails/hap_detector/hap_serving_runtime.yaml
-oc apply -f guardrails/hap_detector/hap_isvc.yaml
+oc apply -f guardrails/hap_detector/hap.yaml
 ```
 Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
 
