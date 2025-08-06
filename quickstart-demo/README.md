@@ -81,7 +81,7 @@ python3 prompt.py --url $GUARDRAILS_GATEWAY/all/v1/chat/completions --model phi3
 ```
 
 Returns:
-````
+```
 Warning: Unsuitable input detected. Please check the detected entities on your input and try again with the unsuitable input removed.
 Input Detections:
    0) The gibberish-detector flagged the following text as noise: "asdljkhasdl;ksdflkjsdflkjsdfl;kjsdfj"
