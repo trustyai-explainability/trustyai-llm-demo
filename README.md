@@ -14,7 +14,7 @@ This demo requires the LLM to be deployed as a [KServe Raw deployment](https://a
 
 ---
 ## 2. Deploy RHOAI
-This will use the latest upstream image of TrustyAI:
+This DSC is configured to use a tailored set of images for this demo:
 
 `oc apply -f dsc.yaml`
 
