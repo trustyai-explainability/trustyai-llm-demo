@@ -147,6 +147,7 @@ routes:
 ```
 First is `all`, which will be served at `$GUARDRAILS_GATEWAY_URL/all/v1/chat/completions`, which will use both the `regex_competitor` and `hap` detectors. Next is `hap` will just uses the `hap` detector, and finally we have the `passthrough` preset, which does not use any detectors. 
 
+### 4.5) Applying the ConfigMaps
 Now that we've explored the configuration, let's deploy the configmap:
 ```bash
 oc apply -f guardrails/configmap_vllm_gateway.yaml
