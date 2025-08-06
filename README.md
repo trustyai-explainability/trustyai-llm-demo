@@ -45,6 +45,8 @@ python3 prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 -
 
 ---
 ## 4. Guardrails
+In the following section, we'll walk through the configurations that have been provided inside of the `guardrails` folder. Everything is already written for you, so there's no need to add anything to the yaml files unless you're trying to experiment!
+
 ### 4.1 Deploy the Hateful And Profane (HAP) language detector
 This will use IBM's [Granite-Guadrian-HAP-38m](https://huggingface.co/ibm-granite/granite-guardian-hap-38m) model, which is a small
 language model for detecting problematic speech.
@@ -61,6 +63,7 @@ Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
 
 
 ### 4.2) Configure the Guardrails Orchestrator
+Open `guardrails/configmap_orchestrator.yaml`. This is our configuration for the guardrails orchestrator:
 
 ```yaml
   config.yaml: |
@@ -85,26 +88,31 @@ Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
         default_threshold: 0.5
 ```
 
-Here, we define the location of our `chat_generation` model server, and the locations of 
+Here, we've defined the location of our `chat_generation` model server, and the locations of 
 our detector servers. The `hap` detector is reachable via the service that is created by the KServe
 deployment (`phi3-predictor.model-namespace.svc.cluster.local`), while our regex detector sidecar will be launched at `localhost:8080`- this will always
 be the case when using the regex detector sidecar. 
 
 
 ### 4.3) Configure our regex detector
-To filter out converstations about our rival juice vendors, we'll use the following regex pattern:
+Open `guardrails/configmap_vllm_gateway.yaml`. This is where we can configure our local detectors and our "preset" guardrailing pipeines. 
+
+On line 19, we've used the following regex pattern to filter out converstations about our rival juice vendors:
 ```regexp
 \b(?i:apple|cranberry|grape|orange|pineapple|)\b
 ```
 This will flag anything that matches that regex pattern as a detection- in this case, any mention of the words `apple`, `cranberry`, `grape`, `orange`, or `pineapple` regardless of case.
 
+
 ### 4.4) Configure the Guardrails Gateway
+Again, looking inside  `guardrails/configmap_vllm_gateway.yaml`:
+
 The guardrails gateway provides two main features:
 1) It provides the OpenAI `v1/chat/completions` API, which lets you hotswap between unguardrailed and guardrailed models
 2) It lets you create guardrail "presets" baked into the endpoint.
 
 #### Detectors 
-First, we set up the detectors that we want to use:
+First, we've set up the detectors that we want to use:
 ```yaml
  detectors:
   - name: regex_competitor
@@ -118,13 +126,13 @@ First, we set up the detectors that we want to use:
     output: true
     detector_params: {}
 ```
-Here, we refer to the two detector names we created in the Orchestrator Configuration (`hap` and `regex_competitor`).
+Here, we've referred to the two detector names we created in the Orchestrator Configuration (`hap` and `regex_competitor`).
 For both detectors, we specify `input: true` and `output: true`, meaning we will use them for both input and output
 detectors. If you want to run a detector on only input or only output, you can change these flags. Finally, for the `regex_competitor`
 detector, we define the specific regex that we described earlier.
 
 #### Defining Presets
-Next, we'll create three preset pipelines for those detectors:
+Next, we've created three preset pipelines for those detectors:
 ```yaml
 routes:
   - name: all
@@ -139,19 +147,12 @@ routes:
 ```
 First is `all`, which will be served at `$GUARDRAILS_GATEWAY_URL/all/v1/chat/completions`, which will use both the `regex_competitor` and `hap` detectors. Next is `hap` will just uses the `hap` detector, and finally we have the `passthrough` preset, which does not use any detectors. 
 
-Once configured, we will deploy the configmap:
+Now that we've explored the configuration, let's deploy the configmap:
 ```bash
 oc apply -f guardrails/configmap_vllm_gateway.yaml
 ```
-You can see the full configmap [here](guardrails/configmap_vllm_gateway.yaml).
 
-### 4.5) Configure the Guardrails orchestrator
-In 'guardrails/configmap_orchestrator.yaml', set the following values:
-- `chat_generation.service.hostname`: Set this to the name of your Phi-e predictor service. On my cluster, that's 
-`phi3-predictor.model-namespace.svc.cluster.local`
-- `detectors.hap.service.hostname`: Set this to the name of your HAP predictor service. On my cluster, that's `guardrails-detector-ibm-hap-predictor.model-namespace.svc.cluster.local`
-
-Then apply the configs:
+Now, we can apply the final two configmaps needed to configure the orchestrator:
 ```bash
 oc apply -f guardrails/configmap_auxiliary_images.yaml
 oc apply -f guardrails/configmap_orchestrator.yaml
