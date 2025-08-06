@@ -40,7 +40,7 @@ oc port-forward $(oc get pods -o name | grep phi3) 8080:8080
 
 Then, in a new terminal tab:
 ```bash
-python3 prompt.py --url http://localhost:8080 --model phi3 --message "Hi, can you tell me about yourself?"
+python3 prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 --message "Hi, can you tell me about yourself?"
 ````
 
 ---
