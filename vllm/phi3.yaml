@@ -57,7 +57,6 @@ metadata:
     opendatahub.io/dashboard: 'true'
   annotations:
     openshift.io/display-name: phi3
-    security.opendatahub.io/enable-auth: 'true'
     serving.knative.openshift.io/enablePassthrough: 'true'
     serving.kserve.io/deploymentMode: RawDeployment
     sidecar.istio.io/inject: 'true'
