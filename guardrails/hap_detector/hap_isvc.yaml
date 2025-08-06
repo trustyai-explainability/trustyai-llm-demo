@@ -6,7 +6,6 @@ metadata:
     opendatahub.io/dashboard: 'true'
   annotations:
     openshift.io/display-name: guardrails-detector-ibm-hap
-    security.opendatahub.io/enable-auth: 'true'
     serving.knative.openshift.io/enablePassthrough: 'true'
     sidecar.istio.io/inject: 'true'
     sidecar.istio.io/rewriteAppHTTPProbers: 'true'
