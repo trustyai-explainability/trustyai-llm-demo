@@ -48,8 +48,9 @@ python3 prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 -
 In the following section, we'll walk through the configurations that have been provided inside of the `guardrails` folder. Everything is already written for you, so there's no need to add anything to the yaml files unless you're trying to experiment!
 
 If you want to skip the explanations and get straight to playing around, you can run:
-`oc apply -f guardrails/*.yaml`
-
+```bash
+oc apply -f guardrails/*.yaml`
+```
 
 ### 4.1 Deploy the Hateful And Profane (HAP) language detector
 This will use IBM's [Granite-Guadrian-HAP-38m](https://huggingface.co/ibm-granite/granite-guardian-hap-38m) model, which is a small
@@ -185,16 +186,13 @@ If everything is okay, it should return:
 ```json
 {
   "services": {
-    "regex_language": {
-      "status": "HEALTHY"
-    },
-    "chat_generation": {
-      "status": "HEALTHY"
-    },
     "hap": {
       "status": "HEALTHY"
     },
     "regex_competitor": {
+      "status": "HEALTHY"
+    },
+    "chat_generation": {
       "status": "HEALTHY"
     }
   }
