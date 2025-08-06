@@ -202,6 +202,12 @@ If everything is okay, it should return:
 ---
 ## 5 Have a play around with Guardrails!
 First, set up:
+In a new terminal window/tab, port-forward your model's endpoint to localhost:
+```bash
+oc port-forward $(oc get pods -o name | grep phi3) 8080:8080 &
+```
+This is simply to provide an easy way of talking to your model for demo purposes- this is not a prerequisite of guardrails.
+
 ```bash
 GUARDRAILS_GATEWAY=https://$(oc get routes guardrails-gateway -o jsonpath='{.spec.host}')
 RAW_MODEL=http://localhost:8080
