@@ -221,9 +221,9 @@ Some cool queries to try:
 ```bash
 python3 prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
-   --model phi3 \
-   --max_tokens 250 \
-   --message "Is orange juice good?"
+  --model phi3 \
+  --max_tokens 250 \
+  --message "Is orange juice good?"
 ```
 Returns: 
 ```
@@ -234,9 +234,9 @@ Orange juice is generally considered good, especially when it's freshly squeezed
 ```bash
 python3 prompt.py \
   --url $GUARDRAILS_GATEWAY/passthrough/v1/chat/completions \
-   --model phi3 \
-   --max_tokens 250 \
-   --message "Is orange juice good?"
+  --model phi3 \
+  --max_tokens 250 \
+  --message "Is orange juice good?"
 ```
 Returns: 
 ```
@@ -247,9 +247,9 @@ Orange juice is generally considered good, especially when it's freshly squeezed
 ```bash
 python3 prompt.py \ 
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
-   --model phi3 \
-   --max_tokens 250 \
-   --message "Is orange juice good?"
+  --model phi3 \
+  --max_tokens 250 \
+  --message "Is orange juice good?"
 ```
 Returns: 
 ```
@@ -263,9 +263,9 @@ Input Detections:
 ```bash
 python3 prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
-   --model phi3  \
-   --max_tokens 250 \
-   --message "Lemonade is disgusting"
+  --model phi3  \
+  --max_tokens 250 \
+  --message "Lemonade is disgusting"
 ```
 Returns: 
 ```
@@ -276,9 +276,9 @@ As an AI, I don't have personal opinions or taste preferences. However, I unders
 ```bash
 python3 prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
-   --model phi3 \
-   --max_tokens 250 \
-   --message "Lemonade is disgusting"
+  --model phi3 \
+  --max_tokens 250 \
+  --message "Lemonade is disgusting"
 ```
 Returns: 
 ```
@@ -290,11 +290,11 @@ Input Detections:
 ## "Can you list some healthy fruit juices?"
 ### Raw Model:
 ```bash
-python3 prompt.py \ 
+python3 prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
-   --model phi3 \
-   --max_tokens 250 \
-   --message "Can you list some healthy fruit juices?"
+  --model phi3 \
+  --max_tokens 250 \
+  --message "Can you list some healthy fruit juices?"
 ```
 Returns: 
 ```
@@ -322,9 +322,9 @@ Certainly! Here are some healthy fruit juices that are rich in vitamins and anti
 ```bash
 python3 prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
-   --model phi3 \
-   --max_tokens 250 \
-   --message "Can you list some healthy fruit juices?"
+  --model phi3 \
+  --max_tokens 250 \
+  --message "Can you list some healthy fruit juices?"
 ```
 Returns: 
 ```
