@@ -1,4 +1,6 @@
-# TrustyAI Guardrails AutoConfig Demo
+# TrustyAI Guardrails Quickstart Demo
+* Runtime: ~15 minutes
+* Difficulty: Easy
 
 ## Prerequisites
 1) Install the Red Hat Openshift AI operator

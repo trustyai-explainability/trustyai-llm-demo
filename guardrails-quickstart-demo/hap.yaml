@@ -1,0 +1,26 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: ibm-hate-and-profanity-detector-open
+  labels:
+    opendatahub.io/dashboard: 'true'
+    trustyai/guardrails: 'true'
+  annotations:
+    openshift.io/display-name: ibm-hate-and-profanity-detector
+    serving.knative.openshift.io/enablePassthrough: 'true'
+    sidecar.istio.io/inject: 'true'
+    security.opendatahub.io/enable-auth: 'true'
+    sidecar.istio.io/rewriteAppHTTPProbers: 'true'
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      modelFormat:
+        name: guardrails-detector-huggingface
+      name: ''
+      runtime: guardrails-detector-runtime-hap
+      storage:
+        key:  aws-connection-data-connection
+        path: granite-guardian-hap-38m

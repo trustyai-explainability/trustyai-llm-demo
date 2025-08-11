@@ -1,4 +1,7 @@
 # 🍋 TrustyAI Lemonade Stand Demo  🍋
+* Runtime: ~30 minutes
+* Difficulty: Medium
+
 In this example, we'll imagine we run a successful lemonade stand and want to deploy a customer service
 agent so our customers can learn more about our products. We'll want to make sure all conversations with
 the agent are family friendly, and that it does not promote our rival fruit juice vendors. 

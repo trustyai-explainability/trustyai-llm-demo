@@ -1,0 +1,29 @@
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: LMEvalJob
+metadata:
+  name: arc-easy-eval-job
+spec:
+  model: local-completions  # this should be either local-completions or local-chat-completions. If your evaluation is multiple-choice, make sure to use the former.
+  taskList:
+    taskNames:
+      - arc_easy # a list of evaluation tasks to run
+  logSamples: true
+  batchSize: '1'
+  allowOnline: true
+  allowCodeExecution: false
+  outputs:
+    pvcManaged:
+      size: 5Gi
+  modelArgs:
+    - name: model
+      value: phi3 # this should be the name of the InferenceService you're looking to evaluate
+    - name: base_url
+      value: http://phi3-predictor:8080/v1/completions # the location of your model's /chat/completions or /completions endpoint
+    - name: num_concurrent
+      value:  "1"
+    - name: max_retries
+      value:  "3"
+    - name: tokenized_requests
+      value: "False"
+    - name: tokenizer
+      value: microsoft/Phi-3-mini-4k-instruct # the tokenizer to use during the evaluation. For best results, this should match your model
