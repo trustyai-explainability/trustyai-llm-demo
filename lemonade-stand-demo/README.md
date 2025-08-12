@@ -4,7 +4,7 @@
 
 In this example, we'll imagine we run a successful lemonade stand and want to deploy a customer service
 agent so our customers can learn more about our products. We'll want to make sure all conversations with
-the agent are family friendly, and that it does not promote our rival fruit juice vendors. 
+the agent are family friendly, and that it does not promote our rival fruit juice vendors.
 
 ---
 ## 1. Install RHOAI and all prerequisite operators for a GPU model deployment
@@ -50,7 +50,103 @@ python3 ../common/prompt.py --url http://localhost:8080/v1/chat/completions --mo
 
 
 ---
-## 4. Guardrails
+## 4. Configure OpenTelemetry
+Before we configure the guardrails service, let's set up our observability stack to view metrics and traces for it. We'll walk through the configurations provided inside the `telemetry` folder which has already been written you. However, feel free to edit the files if you want to experiment!
+
+### Prerequisites
+* Jaeger Operator installed
+* Distributed Tracing Platform (OpenTelemetry) Operator installed
+
+### 4.1 Enable User Workload Monitoring
+In order to observe telemetry data in OpenShift, you need to edit the `cluster-monitoring-config` ConfigMap object.
+```bash
+oc -n openshift-monitoring patch configmap cluster-monitoring-config --type merge -p '{"data":{"config.yaml":"enableUserWorkload: true\n"}}'
+```
+
+### 4.2 Deploy a Jaegar instance
+To view traces or paths taken by requests, we will use Jaegar as our backend UI. First, deploy a Jaeger instance.
+```bash
+oc apply -f telemetry/jaeger.yaml
+```
+Wait for the `my-jaeger-xxx` pod to spin up.
+
+Sanity check your Jaeger deployment by copying and pasting the route in your browser window.
+```bash
+oc get routes | grep jaeger
+```
+
+![](imgs/jaeger_ui.png)
+
+### 4.3 Configure the OpenTelemetry instance
+Open `telemetry/opentelemetry.yaml`. This is our configuration for the OpenTelemetry collector. It contains a ConfigMap that generates a certificate that we'll use to secure communication paths between our OpenTelemetry and Jaegar services:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"
+  name: my-otelcol-cabundle
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: my-otelcol
+spec:
+  mode: deployment
+  observability:
+    metrics:
+      enableMetrics: true
+  config: |
+    processors:
+      batch:
+        send_batch_size: 10000
+        timeout: 10s
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    exporters:
+      debug:
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        add_metric_suffixes: false
+        resource_to_telemetry_conversion:
+          enabled: true
+      otlp:
+        endpoint: my-jaeger-collector.model-namespace.svc.cluster.local:14250
+        tls:
+          ca_file: /etc/pki/ca-trust/source/service-ca/service-ca.crt
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp, debug]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheus, debug]
+  volumeMounts:
+    - mountPath: /etc/pki/ca-trust/source/service-ca
+      name: cabundle-volume
+  volumes:
+    - configMap:
+        name: my-otelcol-cabundle
+      name: cabundle-volume
+```
+Under `exporters`, we've defined the locations of the Jaeger collector and Prometheus services. This means that the OpenTelemetry collector will send telemetry data to these specific backends.
+
+Also, take note that the `my-otelcol-cabundle` ConfigMap is mounted to our OpenTelemetry container via the path `/etc/pki/ca-trust/source/service-ca`. This allows our Jaeger service to access the certificate.
+
+Wait for `my-otelcol-collector-xxx` pod to spin up
+
+---
+## 5. Guardrails
 In the following section, we'll walk through the configurations that have been provided inside of the `guardrails` folder. Everything is already written for you, so there's no need to add anything to the yaml files unless you're trying to experiment!
 
 *If you want to skip the explanations and get straight to playing around, you can run:*
@@ -71,8 +167,7 @@ oc apply -f guardrails/hap_detector/hap.yaml
 ```
 Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
 
-
-### 4.2) Configure the Guardrails Orchestrator
+### 5.2) Configure the Guardrails Orchestrator
 Open `guardrails/configmap_orchestrator.yaml`. This is our configuration for the guardrails orchestrator:
 
 ```yaml
@@ -98,14 +193,14 @@ Open `guardrails/configmap_orchestrator.yaml`. This is our configuration for the
         default_threshold: 0.5
 ```
 
-Here, we've defined the location of our `chat_generation` model server, and the locations of 
+Here, we've defined the location of our `chat_generation` model server, and the locations of
 our detector servers. The `hap` detector is reachable via the service that is created by the KServe
 deployment (`phi3-predictor.model-namespace.svc.cluster.local`), while our regex detector sidecar will be launched at `localhost:8080`- this will always
-be the case when using the regex detector sidecar. 
+be the case when using the regex detector sidecar.
 
 
-### 4.3) Configure our regex detector
-Open `guardrails/configmap_vllm_gateway.yaml`. This is where we can configure our local detectors and our "preset" guardrailing pipeines. 
+### 5.3) Configure our regex detector
+Open `guardrails/configmap_vllm_gateway.yaml`. This is where we can configure our local detectors and our "preset" guardrailing pipeines.
 
 On line 19, we've used the following regex pattern to filter out converstations about our rival juice vendors:
 ```regexp
@@ -114,14 +209,14 @@ On line 19, we've used the following regex pattern to filter out converstations 
 This will flag anything that matches that regex pattern as a detection- in this case, any mention of the words `apple`, `cranberry`, `grape`, `orange`, or `pineapple` regardless of case.
 
 
-### 4.4) Configure the Guardrails Gateway
+### 5.4) Configure the Guardrails Gateway
 Again, looking inside  `guardrails/configmap_vllm_gateway.yaml`:
 
 The guardrails gateway provides two main features:
 1) It provides the OpenAI `v1/chat/completions` API, which lets you hotswap between unguardrailed and guardrailed models
 2) It lets you create guardrail "presets" baked into the endpoint.
 
-#### Detectors 
+#### Detectors
 First, we've set up the detectors that we want to use:
 ```yaml
  detectors:
@@ -129,7 +224,7 @@ First, we've set up the detectors that we want to use:
     input: true
     output: true
     detector_params:
-      regex:    
+      regex:
         - \b(?i:orange|apple|cranberry|pineapple|grape)\b
   - name: hap
     input: true
@@ -155,9 +250,9 @@ routes:
   - name: passthrough
     detectors:
 ```
-First is `all`, which will be served at `$GUARDRAILS_GATEWAY_URL/all/v1/chat/completions`, which will use both the `regex_competitor` and `hap` detectors. Next is `hap` will just uses the `hap` detector, and finally we have the `passthrough` preset, which does not use any detectors. 
+First is `all`, which will be served at `$GUARDRAILS_GATEWAY_URL/all/v1/chat/completions`, which will use both the `regex_competitor` and `hap` detectors. Next is `hap` will just uses the `hap` detector, and finally we have the `passthrough` preset, which does not use any detectors.
 
-### 4.5) Applying the ConfigMaps
+### 5.5) Applying the ConfigMaps
 Now that we've explored the configuration, let's deploy the configmap:
 ```bash
 oc apply -f guardrails/configmap_vllm_gateway.yaml
@@ -176,12 +271,12 @@ Right now, the TrustyAI operator does not yet automatically create a route to th
 oc apply -f guardrails/gateway_route.yaml
 ```
 
-### 4.6) Deploy the Orchestrator
+### 5.6) Deploy the Orchestrator
 ```bash
 oc apply -f guardrails/orchestrator_cr.yaml
 ```
 
-### 4.7) Check the Orchestrator Health
+### 5.7) Check the Orchestrator Health
 ```bash
 ORCH_ROUTE_HEALTH=$(oc get routes guardrails-orchestrator-health -o jsonpath='{.spec.host}')
 curl -s https://$ORCH_ROUTE_HEALTH/info | jq
@@ -205,7 +300,7 @@ If everything is okay, it should return:
 ```
 
 ---
-## 5 Have a play around with Guardrails!
+## 6 Have a play around with Guardrails!
 ```bash
 GUARDRAILS_GATEWAY=https://$(oc get routes guardrails-gateway -o jsonpath='{.spec.host}')
 RAW_MODEL=http://localhost:8080
@@ -215,9 +310,9 @@ RAW_MODEL=http://localhost:8080
 
 The available endpoints are:
 
-- `$GUARDRAILS_GATEWAY/passthrough`: query the raw, unguardrailed model. 
+- `$GUARDRAILS_GATEWAY/passthrough`: query the raw, unguardrailed model.
 - `$GUARDRAILS_GATEWAY/hap`: query using with the HAP detector.
-- `$GUARDRAILS_GATEWAY/all`: query with all available detectors, so the HAP and competitor-check detectors. 
+- `$GUARDRAILS_GATEWAY/all`: query with all available detectors, so the HAP and competitor-check detectors.
 
 
 Some cool queries to try:
@@ -229,7 +324,7 @@ python3 ../common/prompt.py \
   --model phi3 \
   --message "Is orange juice good?"
 ```
-Returns: 
+Returns:
 ```
 Orange juice is generally considered good, especially when it's freshly squeezed. It's a rich source of vitamin C, which is essential for a healthy immune system. It also contains other nutrients like potassium, folate, and antioxidants. However, the quality of orange juice can vary depending on the brand and whether it's freshly squeezed or from concentrate. It's always best to check the label for added sugars and preservatives.
 ```
@@ -241,19 +336,19 @@ python3 ../common/prompt.py \
   --model phi3 \
   --message "Is orange juice good?"
 ```
-Returns: 
+Returns:
 ```
 Orange juice is generally considered good, especially when it's freshly squeezed. It's a rich source of vitamin C, which is essential for a healthy immune system. It also contains other nutrients like potassium, folate, and antioxidants. However, the quality of orange juice can vary depending on the brand and whether it's freshly squeezed or from concentrate. It's always best to check the label for added sugars and preservatives.
 ```
 
 ### Guardrails, `/all` endpoint:
 ```bash
-python3 ../common/prompt.py \
+python3 prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
   --model phi3 \
   --message "Is orange juice good?"
 ```
-Returns: 
+Returns:
 ```
 Warning: Unsuitable input detected. Please check the detected entities on your input and try again with the unsuitable input removed.
 Input Detections:
@@ -268,9 +363,9 @@ python3 ../common/prompt.py \
   --model phi3  \
   --message "Lemonade is disgusting"
 ```
-Returns: 
+Returns:
 ```
-As an AI, I don't have personal opinions or taste preferences. However, I understand that taste is subjective, and what one person finds disgusting, another may find delicious. It's important to respect individual tastes and preferences.
+As an AI, I don't have personal opinions or taste preferences. However, I understand that taste is subjective, and what one person finds d--------------------isgusting, another may find delicious. It's important to respect individual tastes and preferences.
 ```
 
 ### Guardrails, `/all` endpoint:
@@ -280,7 +375,7 @@ python3 ../common/prompt.py \
   --model phi3 \
   --message "Lemonade is disgusting"
 ```
-Returns: 
+Returns:
 ```
 Warning: Unsuitable input detected. Please check the detected entities on your input and try again with the unsuitable input removed.
 Input Detections:
@@ -295,7 +390,7 @@ python3 ../common/prompt.py \
   --model phi3 \
   --message "Can you list some healthy fruit juices?"
 ```
-Returns: 
+Returns:
 ```
 Certainly! Here are some healthy fruit juices that are rich in vitamins and antioxidants:
 
@@ -324,7 +419,7 @@ python3 ../common/prompt.py \
   --model phi3 \
   --message "Can you list some healthy fruit juices?"
 ```
-Returns: 
+Returns:
 ```
 Warning: Unsuitable output detected.
 Output Detections:
@@ -334,6 +429,29 @@ Output Detections:
    3) The regex_competitor detector flagged the following text: "Grape"
    4) The regex_competitor detector flagged the following text: "Cranberry"
 ```
+
+## Guardrails, telemetry data
+
+### Metrics
+To view metrics for the guardrails service, from your OpenShift web console, go to `Observe -> Metrics`. Try querying one of the following metrics from the Prometheus UI:
+
+* `incoming_request_count`
+* `success_request_count`
+* `server_error_response_count`
+* `client_response_count`
+* `client_request_duration`
+
+![](imgs/prometheus.png)
+
+### Traces
+To view traces for the guardrails service, get the Jaeger service route URL and copy and paste it in your browser window.
+```bash
+oc get routes | grep jaeger
+```
+
+From the `Service` dropdown menu on the left, select `fms_guardrails_orchestr8` and the click on the `Find Traces` button.
+
+![](imgs/traces.png )
 
 ## More information
 - [TrustyAI Notes Repo](https://github.com/trustyai-explainability/reference/tree/main)

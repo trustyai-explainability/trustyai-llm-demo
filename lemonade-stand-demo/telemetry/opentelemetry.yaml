@@ -1,0 +1,51 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: my-otelcol
+spec:
+  mode: deployment
+  observability:
+    metrics:
+      enableMetrics: true
+  config: |
+    processors:
+      batch:
+        send_batch_size: 10000
+        timeout: 10s
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    exporters:
+      debug:
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        add_metric_suffixes: false
+        resource_to_telemetry_conversion:
+          enabled: true
+      otlp:
+        endpoint: my-jaegar-collector.model-namespace.svc.cluster.local:14250
+        tls:
+          ca_file: /etc/pki/ca-trust/source/service-ca/service-ca.crt
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp, debug]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheus, debug]
+  volumeMounts:
+    - mountPath: /etc/pki/ca-trust/source/service-ca
+      name: cabundle-volume
+  volumes:
+    - configMap:
+        name: my-otelcol-cabundle
+      name: cabundle-volume

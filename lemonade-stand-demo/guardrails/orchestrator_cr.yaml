@@ -7,4 +7,11 @@ spec:
   enableGuardrailsGateway: true
   guardrailsGatewayConfig: "fms-orchestr8-config-gateway"
   enableBuiltInDetectors: true
+  otelExporter:
+    metricsEndpoint: 'http://my-otelcol-test-collector.model-namespace.svc.cluster.local:4317'
+    metricsProtocol: grpc
+    otlpExport: 'metrics,traces'
+    tracesEndpoint: 'http://my-jaegar-collector.model-namespace.svc.cluster.local:4317'
+    tracesProtocol: grpc
   replicas: 1
+
