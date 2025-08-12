@@ -70,8 +70,10 @@ oc port-forward $(oc get pods -o name | grep phi3) 8080:8080
 
 #### Now return to your original terminal:
 ```bash
-python3 ../guardrails-quickstart-demo/prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 --message "Hi, can you tell me about yourself?"
+python3 ../common/prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 --message "Hi, can you tell me about yourself?"
 ````
+
+#### ❗NOTE: [`../common/prompt.py`](../common/prompt.py)is a Python script included in this repository for sending chat/completions requests to your deployed model. To run `prompt.py`, make sure the requests library is installed: `pip install requests`
 
 ---
 ## 5. Run the evaluation

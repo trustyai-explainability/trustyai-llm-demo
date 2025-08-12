@@ -41,10 +41,13 @@ You can test the model by sending some inferences to it:
 oc port-forward $(oc get pods -o name | grep phi3) 8080:8080
 ```
 
-Then, in a new terminal tab:
+Then, in a new terminal tab, we can send some prompts to the model via the included `prompt.py` helper script.
 ```bash
-python3 prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 --message "Hi, can you tell me about yourself?"
+python3 ../common/prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 --message "Hi, can you tell me about yourself?"
 ````
+
+#### ❗NOTE: [`../common/prompt.py`](../common/prompt.py) is a Python script included in this repository for sending chat/completions requests to your deployed model. To run `prompt.py`, make sure the requests library is installed: `pip install requests`
+
 
 ---
 ## 4. Guardrails
@@ -56,7 +59,7 @@ for file in guardrails/*.yaml; oc apply -f $file
 ```
 
 ### 4.1 Deploy the Hateful And Profane (HAP) language detector
-This will use IBM's [Granite-Guadrian-HAP-38m](https://huggingface.co/ibm-granite/granite-guardian-hap-38m) model, which is a small
+This will use IBM's [Granite-Guardian-HAP-38m](https://huggingface.co/ibm-granite/granite-guardian-hap-38m) model, which is a small
 language model for detecting problematic speech.
 ```bash
 oc apply -f guardrails/hap_detector/hap_model_container.yaml
@@ -221,7 +224,7 @@ Some cool queries to try:
 ## "Is orange juice good?"
 ### Raw Model:
 ```bash
-python3 prompt.py \
+python3 ../common/prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
   --model phi3 \
   --message "Is orange juice good?"
@@ -233,7 +236,7 @@ Orange juice is generally considered good, especially when it's freshly squeezed
 
 ### Guardrails, `/passthrough` endpoint:
 ```bash
-python3 prompt.py \
+python3 ../common/prompt.py \
   --url $GUARDRAILS_GATEWAY/passthrough/v1/chat/completions \
   --model phi3 \
   --message "Is orange juice good?"
@@ -245,7 +248,7 @@ Orange juice is generally considered good, especially when it's freshly squeezed
 
 ### Guardrails, `/all` endpoint:
 ```bash
-python3 prompt.py \ 
+python3 ../common/prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
   --model phi3 \
   --message "Is orange juice good?"
@@ -260,7 +263,7 @@ Input Detections:
 ## "Lemonade is disgusting"
 ### Raw Model:
 ```bash
-python3 prompt.py \
+python3 ../common/prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
   --model phi3  \
   --message "Lemonade is disgusting"
@@ -272,7 +275,7 @@ As an AI, I don't have personal opinions or taste preferences. However, I unders
 
 ### Guardrails, `/all` endpoint:
 ```bash
-python3 prompt.py \
+python3 ../common/prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
   --model phi3 \
   --message "Lemonade is disgusting"
@@ -287,7 +290,7 @@ Input Detections:
 ## "Can you list some healthy fruit juices?"
 ### Raw Model:
 ```bash
-python3 prompt.py \
+python3 ../common/prompt.py \
   --url $RAW_MODEL/v1/chat/completions \
   --model phi3 \
   --message "Can you list some healthy fruit juices?"
@@ -316,7 +319,7 @@ Certainly! Here are some healthy fruit juices that are rich in vitamins and anti
 
 ### Guardrails, `/all` endpoint:
 ```bash
-python3 prompt.py \
+python3 ../common/prompt.py \
   --url $GUARDRAILS_GATEWAY/all/v1/chat/completions \
   --model phi3 \
   --message "Can you list some healthy fruit juices?"
