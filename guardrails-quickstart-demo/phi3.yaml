@@ -81,7 +81,7 @@ spec:
           nvidia.com/gpu: '1'
       runtime: vllm-runtime
       storage:
-        key: aws-connection-llm-data-connection
+        key: aws-connection-data-connection
         path: Phi-3-mini-4k-instruct
     tolerations:
       - effect: NoSchedule
