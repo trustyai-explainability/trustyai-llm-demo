@@ -1,0 +1,27 @@
+[project]
+name = "ragas-quickstart-demo"
+version = "0.1.0"
+description = "Ragas evaluation demo on Kubeflow Pipelines"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ragas==0.3.0",
+    "langchain-core",
+    "langchain-ollama", # if using local inference
+    "Pillow", # not sure why this isn't captured as a Ragas dependency
+    "kfp>=2.5.0",
+    "kfp-kubernetes>=2.0.0",
+    "s3fs>=2024.12.0",
+    "pandas==2.3.0",
+    "pyarrow==20.0.0",
+    "requests==2.32.4",
+    "rich",
+    "pydantic",
+    "ipykernel",
+    "dotenv",
+]
+[dependency-groups]
+dev = [
+    "ruff",
+    "mypy",
+]
