@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nemo-config
+data:
+  config.yaml: |
+    models:
+      - type: main
+        engine: vllm_openai
+        parameters:
+          openai_api_base: "https://phi3-predictor.model-namespace.svc.cluster.local:8443/v1"
+          model_name: "phi3"
+    rails:
+      config:
+        sensitive_data_detection:
+          input:
+            entities:
+              - EMAIL_ADDRESS
+          output:
+            entities:
+              - PERSON
+      input:
+        flows:
+          - detect sensitive data on input
+          - check message length
+          - check forbidden words
+      output:
+        flows:
+          - detect sensitive data on output
+  rails.co: |
+    define flow check message length
+      $length_result = execute check_message_length
+      if $length_result == "blocked_too_long"
+        bot inform message too long
+        stop
+      if $length_result == "warning_long" 
+        bot warn message long
+
+    define bot inform message too long
+      "Please keep your message under 100 words for better assistance."
+
+    define bot warn message long
+      "That's quite detailed! I'll help as best I can."
+    
+    define flow check forbidden words
+      $forbidden_result = execute check_forbidden_words
+      if $forbidden_result != "allowed"
+        bot inform forbidden content
+        stop
+
+    define bot inform forbidden content
+      "I can't help with that type of request. Please ask something else."
+    
+
+  actions.py: |
+    from typing import Optional
+    from nemoguardrails.actions import action
+
+    @action(is_system_action=True)
+    async def check_message_length(context: Optional[dict] = None) -> str:
+        """Check if user message is within acceptable length limits."""
+        user_message = context.get("user_message", "")
+        word_count = len(user_message.split())
+        MAX_WORDS = 100
+        if word_count > MAX_WORDS:
+            return "blocked_too_long"
+        elif word_count > MAX_WORDS * 0.8:
+            return "warning_long"
+        return "allowed"
+
+    @action(is_system_action=True)
+    async def check_forbidden_words(context: Optional[dict] = None) -> str:
+        """Check for forbidden words or topics."""
+        user_message = context.get("user_message", "").lower()
+        forbidden_topics = {
+            "security": ["password", "hack", "exploit", "vulnerability"],
+            "inappropriate": ["violence", "illegal", "harmful"],
+            "competitors": ["chatgpt", "openai", "claude", "anthropic"],
+        }
+        for category, words in forbidden_topics.items():
+            for word in words:
+                if word in user_message:
+                    return f"blocked_{category}_{word}"
+        return "allowed"
+---
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: NemoGuardrails
+metadata:
+  name: nemo-guardrails
+spec:
+  nemoConfig: "nemo-config"
+  env:
+    - name: "OPENAI_API_KEY"
+      valueFrom:
+        secretKeyRef:
+          name: "api-token-secret"
+          key: "token"
