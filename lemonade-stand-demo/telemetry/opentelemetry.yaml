@@ -1,13 +1,24 @@
-apiVersion: opentelemetry.io/v1alpha1
+apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: my-otelcol
 spec:
-  mode: deployment
   observability:
     metrics:
       enableMetrics: true
-  config: |
+  deploymentUpdateStrategy: {}
+  config:
+    exporters:
+      debug: null
+      otlp:
+        endpoint: 'tempo-my-tempo-stack-distributor:4317'
+        tls:
+          insecure: true
+      prometheus:
+        add_metric_suffixes: false
+        endpoint: '0.0.0.0:8889'
+        resource_to_telemetry_conversion:
+          enabled: true
     processors:
       batch:
         send_batch_size: 10000
@@ -20,32 +31,34 @@ spec:
       otlp:
         protocols:
           grpc:
+            endpoint: '0.0.0.0:4317'
           http:
-    exporters:
-      debug:
-      prometheus:
-        endpoint: 0.0.0.0:8889
-        add_metric_suffixes: false
-        resource_to_telemetry_conversion:
-          enabled: true
-      otlp:
-        endpoint: my-jaegar-collector.model-namespace.svc.cluster.local:14250
-        tls:
-          ca_file: /etc/pki/ca-trust/source/service-ca/service-ca.crt
+            endpoint: '0.0.0.0:4318'
     service:
       pipelines:
-        traces:
-          receivers: [otlp]
-          processors: [batch]
-          exporters: [otlp, debug]
         metrics:
-          receivers: [otlp]
-          processors: [batch]
-          exporters: [prometheus, debug]
-  volumeMounts:
-    - mountPath: /etc/pki/ca-trust/source/service-ca
-      name: cabundle-volume
-  volumes:
-    - configMap:
-        name: my-otelcol-cabundle
-      name: cabundle-volume
+          exporters:
+            - prometheus
+            - debug
+          processors:
+            - batch
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - otlp
+            - debug
+          processors:
+            - batch
+          receivers:
+            - otlp
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  mode: deployment
+  

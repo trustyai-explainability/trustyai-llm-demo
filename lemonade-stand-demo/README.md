@@ -54,7 +54,7 @@ python3 ../common/prompt.py --url http://localhost:8080/v1/chat/completions --mo
 Before we configure the guardrails service, let's set up our observability stack to view metrics and traces for it. We'll walk through the configurations provided inside the `telemetry` folder which has already been written you. However, feel free to edit the files if you want to experiment!
 
 ### Prerequisites
-* Jaeger Operator installed
+* Tempo Operator installed
 * Distributed Tracing Platform (OpenTelemetry) Operator installed
 
 ### 4.1 Enable User Workload Monitoring
@@ -63,40 +63,55 @@ In order to observe telemetry data in OpenShift, you need to edit the `cluster-m
 oc -n openshift-monitoring patch configmap cluster-monitoring-config --type merge -p '{"data":{"config.yaml":"enableUserWorkload: true\n"}}'
 ```
 
-### 4.2 Deploy a Jaegar instance
-To view traces or paths taken by requests, we will use Jaegar as our backend UI. First, deploy a Jaeger instance.
-```bash
-oc apply -f telemetry/jaeger.yaml
-```
-Wait for the `my-jaeger-xxx` pod to spin up.
+### 4.2 Deploy a TempoStack instance
+To view traces or paths taken by requests, we will use Tempo which features a Jaegar UI.
 
-Sanity check your Jaeger deployment by copying and pasting the route in your browser window.
+Tempo requires a storage backend as part of its configuration so let's first create a MinIO instance.
+
 ```bash
-oc get routes | grep jaeger
+oc apply -f telemetry/minio.yaml
+```
+Wait for the `minio-xxx` pod to spin up.
+
+Next create the TempoStack instance.
+```bash
+oc apply -f telemetry/tempo.yaml
 ```
 
+Wait for the `my-tempo-stack-xxx` pod to spin up.
+
+Sanity check whether the Jaegar UI was properly deployed by the TempoStack instance by port-forwarding the traces service.
+```bash
+ oc port-forward svc/tempo-my-tempo-stack-query-frontend 16686:16686
+```
+
+In a seperate browser window, go to `http://localhost:16686.com` to access the Jaegar UI.
 ![](imgs/jaeger_ui.png)
 
 ### 4.3 Configure the OpenTelemetry instance
-Open `telemetry/opentelemetry.yaml`. This is our configuration for the OpenTelemetry collector. It contains a ConfigMap that generates a certificate that we'll use to secure communication paths between our OpenTelemetry and Jaegar services:
+Open `telemetry/opentelemetry.yaml`. This is our configuration for the OpenTelemetry collector.
 ```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  annotations:
-    service.beta.openshift.io/inject-cabundle: "true"
-  name: my-otelcol-cabundle
----
-apiVersion: opentelemetry.io/v1alpha1
+apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: my-otelcol
 spec:
-  mode: deployment
   observability:
     metrics:
       enableMetrics: true
-  config: |
+  deploymentUpdateStrategy: {}
+  config:
+    exporters:
+      debug: null
+      otlp:
+        endpoint: 'tempo-my-tempo-stack-distributor:4317'
+        tls:
+          insecure: true
+      prometheus:
+        add_metric_suffixes: false
+        endpoint: '0.0.0.0:8889'
+        resource_to_telemetry_conversion:
+          enabled: true
     processors:
       batch:
         send_batch_size: 10000
@@ -109,39 +124,39 @@ spec:
       otlp:
         protocols:
           grpc:
+            endpoint: '0.0.0.0:4317'
           http:
-    exporters:
-      debug:
-      prometheus:
-        endpoint: 0.0.0.0:8889
-        add_metric_suffixes: false
-        resource_to_telemetry_conversion:
-          enabled: true
-      otlp:
-        endpoint: my-jaeger-collector.model-namespace.svc.cluster.local:14250
-        tls:
-          ca_file: /etc/pki/ca-trust/source/service-ca/service-ca.crt
+            endpoint: '0.0.0.0:4318'
     service:
       pipelines:
-        traces:
-          receivers: [otlp]
-          processors: [batch]
-          exporters: [otlp, debug]
         metrics:
-          receivers: [otlp]
-          processors: [batch]
-          exporters: [prometheus, debug]
-  volumeMounts:
-    - mountPath: /etc/pki/ca-trust/source/service-ca
-      name: cabundle-volume
-  volumes:
-    - configMap:
-        name: my-otelcol-cabundle
-      name: cabundle-volume
+          exporters:
+            - prometheus
+            - debug
+          processors:
+            - batch
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - otlp
+            - debug
+          processors:
+            - batch
+          receivers:
+            - otlp
+      telemetry:
+        metrics:
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+  mode: deployment
 ```
-Under `exporters`, we've defined the locations of the Jaeger collector and Prometheus services. This means that the OpenTelemetry collector will send telemetry data to these specific backends.
 
-Also, take note that the `my-otelcol-cabundle` ConfigMap is mounted to our OpenTelemetry container via the path `/etc/pki/ca-trust/source/service-ca`. This allows our Jaeger service to access the certificate.
+Under `exporters`, we've defined the locations of the Tempo distributor and Prometheus services. This means that the OpenTelemetry collector will send telemetry data to these specific backends.
 
 Wait for `my-otelcol-collector-xxx` pod to spin up
 
@@ -165,7 +180,7 @@ Wait for the `guardrails-container-deployment-hap-xxxx` pod to spin up
 ```bash
 oc apply -f guardrails/hap_detector/hap.yaml
 ```
-Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
+Wait for the `guardrails-detector-ibm-hap-predictor-xxx` pod to spin up
 
 ### 5.2) Configure the Guardrails Orchestrator
 Open `guardrails/configmap_orchestrator.yaml`. This is our configuration for the guardrails orchestrator:
@@ -444,10 +459,12 @@ To view metrics for the guardrails service, from your OpenShift web console, go 
 ![](imgs/prometheus.png)
 
 ### Traces
-To view traces for the guardrails service, get the Jaeger service route URL and copy and paste it in your browser window.
+To view traces for the guardrails service, first port-forward the traces service.
 ```bash
-oc get routes | grep jaeger
+ oc port-forward svc/tempo-my-tempo-stack-query-frontend 16686:16686
 ```
+
+Open up a seperate browser window and go to `http://localhost:16686.com`
 
 From the `Service` dropdown menu on the left, select `fms_guardrails_orchestr8` and the click on the `Find Traces` button.
 
