@@ -8,4 +8,5 @@
 
 ## 💂🏿‍♀️ Guardrail Demos 🛡️
 * [Guardrails Quickstart](./guardrails-quickstart-demo/README.md): This demo will quickly get you started with three detectors, for detecting hate speech, gibberish, and jailbreaking respectively.  
+* [Custom Detectors](./custom-detectors/README.md): This demo shows off how to create custom detectors via Python, and provides an example of LLM self-reflection guardrailing.
 * [Lemonade Stand](./lemonade-stand-demo/README.md): A demo showing manual configuration of guardrails, as shown in the [Guardrails for AI models video on the RH YouTube channel](https://www.youtube.com/watch?v=Owr2ToxRbho)

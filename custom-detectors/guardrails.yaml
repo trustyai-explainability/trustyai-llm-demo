@@ -1,0 +1,67 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: orchestrator-config-custom-detectors
+data:
+  config.yaml: |
+    chat_generation:
+      provider: openai
+      service:
+        hostname: phi4-predictor
+        port: 8080
+    detectors:
+      built_in:
+        type: text_contents
+        service:
+          hostname: 127.0.0.1
+          port: 8080
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+    passthrough_headers:
+      - Authorization
+      - Content-Type
+      - x-forwarded-access-token
+---
+#file: noinspection YAMLSchemaValidation
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: orchestrator-gateway-config-custom-detectors
+data:
+  config.yaml: |
+    detectors:
+      - name: input_guardrail
+        server: built_in
+        input: true
+        output: false
+        detector_params:
+         custom:    
+            - input_guardrail
+      - name: output_guardrail
+        server: built_in
+        input: false 
+        output: true
+        detector_params:
+         custom:    
+            - output_guardrail
+    routes:
+      - name: guardrails
+        detectors:
+          - input_guardrail
+          - output_guardrail
+      - name: passthrough
+        detectors:
+---
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: GuardrailsOrchestrator
+metadata:
+  name: custom-guardrails
+  annotations:
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  enableBuiltInDetectors: true
+  enableGuardrailsGateway: true
+  orchestratorConfig: orchestrator-config-custom-detectors
+  guardrailsGatewayConfig: orchestrator-gateway-config-custom-detectors
+  customDetectorsConfig: custom-detectors
+  replicas: 1
