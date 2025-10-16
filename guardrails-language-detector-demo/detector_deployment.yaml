@@ -1,0 +1,98 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: guardrails-detector-runtime-language-detector
+  annotations:
+    openshift.io/display-name: Guardrails Detector ServingRuntime for KServe
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+  labels:
+    opendatahub.io/dashboard: 'true'
+    trustyai/guardrails: 'true'
+spec:
+  annotations:
+    prometheus.io/port: '8080'
+    prometheus.io/path: '/metrics'
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: guardrails-detector-huggingface
+  containers:
+    - name: kserve-container
+      image: quay.io/rh-ee-mmisiura/hf-detector:latest 
+      command:
+        - uvicorn
+        - app:app
+      args:
+        - "--workers"
+        - "4"
+        - "--host"
+        - "0.0.0.0"
+        - "--port"
+        - "8000"
+        - "--log-config"
+        - "/common/log_conf.yaml"
+      env:
+        - name: MODEL_DIR
+          value: /mnt/models
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: SAFE_LABELS 
+          value: '["pl"]' # list of safe labels, it can accept string labels
+        # - name: SAFE_LABELS 
+        #   value: '[3]' # list of safe labels, it can accept numeric labels
+        # - name: SAFE_LABELS
+        #   value: '[3, "pl"]' # list of safe labels, it can be a mixture of strings and integers (they do not have to correspond to the same label as they do in this example)
+        # - name: SAFE_LABELS
+        #   value: '[]' # empty list means there are no safe labels, all labels would be considered unsafe
+      ports:
+        - containerPort: 8000
+          protocol: TCP
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: language-detector
+  labels:
+    opendatahub.io/dashboard: 'true'
+    trustyai/guardrails: 'true'
+  annotations:
+    openshift.io/display-name: language-detector
+    serving.knative.openshift.io/enablePassthrough: 'true'
+    sidecar.istio.io/inject: 'true'
+    sidecar.istio.io/rewriteAppHTTPProbers: 'true'
+    serving.kserve.io/deploymentMode: RawDeployment
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      modelFormat:
+        name: guardrails-detector-huggingface
+      name: ''
+      runtime: guardrails-detector-runtime-language-detector
+      storage:
+        key: aws-connection-minio-data-connection-detector-models
+        path: xlm-roberta-base-language-detection
+      resources:
+        limits:
+          cpu: '1'
+          memory: 6Gi
+          nvidia.com/gpu: '1'
+        requests:
+          cpu: '1'
+          memory: 6Gi
+          nvidia.com/gpu: '1'
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: language-detector-route
+spec:
+  to:
+    kind: Service
+    name: language-detector-predictor
+  port:
+    targetPort: https
+  tls:
+    termination: reencrypt
