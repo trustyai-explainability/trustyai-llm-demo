@@ -1,0 +1,46 @@
+#file: noinspection YAMLSchemaValidation
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: orchestrator-gateway-config-custom-detectors
+data:
+  config.yaml: |
+    detectors:
+      - name: input_statistics
+        server: built-in-detector
+        input: true
+        output: false
+        detector_params:
+         custom:    
+            - toxicity_tracker
+      - name: output_statistics
+        server: built-in-detector
+        input: false 
+        output: true
+        detector_params:
+         custom:    
+            - refusal_tracker
+    routes:
+      - name: monitored
+        detectors:
+          - input_statistics
+          - output_statistics
+      - name: passthrough
+        detectors:
+---
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: GuardrailsOrchestrator
+metadata:
+  name: custom-guardrails
+  annotations:
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  autoConfig:
+    inferenceServiceToGuardrail: phi4
+    detectorServiceLabelToMatch: trustyai/guardrails
+  enableBuiltInDetectors: true
+  enableGuardrailsGateway: true
+  guardrailsGatewayConfig: orchestrator-gateway-config-custom-detectors
+  customDetectorsConfig: custom-detectors
+  logLevel: DEBUG
+  replicas: 1
