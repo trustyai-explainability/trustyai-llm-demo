@@ -114,4 +114,4 @@ data: # these are just base64 encodings
   AWS_S3_BUCKET: aHVnZ2luZ2ZhY2U= #huggingface
   AWS_S3_ENDPOINT: aHR0cDovL21pbmlvLXN0b3JhZ2UtZ3VhcmRyYWlsLWRldGVjdG9yczo5MDAw #http://minio-storage-guardrail-detectors:9000
   AWS_SECRET_ACCESS_KEY: VEhFU0VDUkVUS0VZ #THESECRETKEY
-type: Opaque%
+type: Opaque
