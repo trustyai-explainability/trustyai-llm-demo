@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chunker-service
+  labels:
+    app: chunker-service
+    app.kubernetes.io/name: chunker-service
+    app.kubernetes.io/component: chunker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chunker-service
+  template:
+    metadata:
+      labels:
+        app: chunker-service
+    spec:
+      containers:
+      - name: chunker
+        image: quay.io/rh-ee-mmisiura/chunkers:llangchain
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8085
+          name: grpc
+          protocol: TCP
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chunker-service
+  labels:
+    app: chunker-service
+spec:
+  selector:
+    app: chunker-service
+  ports:
+  - port: 8085
+    targetPort: 8085
+    protocol: TCP
+    name: grpc
+  type: ClusterIP
