@@ -16,11 +16,15 @@ You'll need to [set up your cluster for a GPU deployment.](https://github.com/tr
 ---
 
 ## 2. Deploy RHOAI
-The default data science cluster should work for this demo, or use the one provided here:
+Create a DSCInitialization `default-dsci` and subsequently a DataScienceCluster `default-dsc` by going to Operators > Installed Operators > Red Hat OpenShift AI / Open Data Hub Operator in the OpenShift console and going to the relevant tabs.
 
-`oc apply -f dsc.yaml`
+If you don't want to use the default data science cluster, use the one provided here:
 
-*Note: this demo was tested on RHOAI 2.19.2, but any version after **2.16.1** _should_ work*
+```sh
+oc apply -f dsc.yaml
+```
+
+*Note: this demo was tested on RHOAI 2.25.0, but any version after **2.16.1** _should_ work*
 
 ---
 
@@ -37,12 +41,12 @@ In our case, we'll be downloading:
 
 If you are happy for TrustyAI to automatically download those two resources, run:
 ```bash
-oc patch configmap trustyai-service-operator-config -n redhat-ods-applications  \
---type merge -p '{"metadata": {"annotations": {"opendatahub.io/managed": "false"}}}'
-oc patch configmap trustyai-service-operator-config -n redhat-ods-applications \
---type merge -p '{"data":{"lmes-allow-online":"true","lmes-allow-code-execution":"true"}}'
-oc rollout restart deployment trustyai-service-operator-controller-manager -n redhat-ods-applications
+oc patch datasciencecluster default-dsc \
+    -n redhat-ods-applications \
+    --type merge \
+    -p '{"spec":{"components":{"trustyai":{"eval":{"lmeval":{"permitCodeExecution":"allow","permitOnline":"allow"}}}}}}'
 ```
+
 Wait for your `trustyai-service-operator-controller-manager` pod in the `redhat-ods-applications` namespace
 to restart, and then TrustyAI should be ready to go.
 
@@ -71,18 +75,18 @@ oc port-forward $(oc get pods -o name | grep phi3) 8080:8080
 #### Now return to your original terminal:
 ```bash
 python3 ../common/prompt.py --url http://localhost:8080/v1/chat/completions --model phi3 --message "Hi, can you tell me about yourself?"
-````
+```
 
-#### ❗NOTE: [`../common/prompt.py`](../common/prompt.py)is a Python script included in this repository for sending chat/completions requests to your deployed model. To run `prompt.py`, make sure the requests library is installed: `pip install requests`
+#### ❗NOTE: [`../common/prompt.py`](../common/prompt.py) is a Python script included in this repository for sending chat/completions requests to your deployed model. To run `prompt.py`, make sure the `requests` library is installed: `pip install requests`.
 
 ---
 ## 5. Run the evaluation
 To start an evaluation, apply an `LMEvalJob` custom resource:
 ```bash
-oc apply -f mmlu_job.yaml
+oc apply -f evaluation_job.yaml
 ```
 
-Check out [mmlujob.yaml](evaluation_job.yaml) to learn more about the `LMEvalJob` specification.
+Check out [evaluation_job.yaml](evaluation_job.yaml) to learn more about the `LMEvalJob` specification.
 
 *Note: the evaluation job container image is quite large, so the first evaluation job you run on your cluster might take a while to start up*
 
