@@ -4,14 +4,11 @@
 
 ## Prerequisites
 1) Install the Red Hat Openshift AI operator
+2) Install the default `DSCInitialization` and `Data Science Cluster`
 
-## 1) Install a RHOAI DataScienceCluster
-This DSC contains a curated set of manifests for this specific demo:
-```bash
-oc apply -f dsc.yaml
-```
+**Note: This demo was last tested and verified on RHOAI 2.25**
 
-## 2) Set up the model storage container
+3) Set up the model storage container
 This will download the model binaries to your cluster and host them in an emulated S3-bucket:
 ```bash
 oc new-project model-namespace || oc project model-namespace
@@ -21,12 +18,12 @@ oc apply -f model_storage_container
 This will take a minute to spin up- once `oc get pods` reports 
 that `1/1` pods are ready, we're ready to move on to the next step. 
 
-## 3) Deploy the detector models
+## 4) Deploy the detector models
 ```bash
 oc apply -f detector_models.yaml
 ```
 
-## 4) Deploy the LLM
+## 5) Deploy the LLM
 Then, we'll deploy our LLM::
 ```bash
 oc apply -f phi3.yaml
@@ -34,12 +31,12 @@ oc apply -f phi3.yaml
 
 Again, wait for all pods to report fully ready before moving on.
 
-## 5) Deploy the Guardrails CR:
+## 6) Deploy the Guardrails CR:
 ```bash
 oc apply -f guardrails.yaml
 ```
 
-## 6) Check that the Guardrails Orchestrator can see all the requisite services:
+## 7) Check that the Guardrails Orchestrator can see all the requisite services:
 
 ```bash
 ORCHESTRATOR_HEALTH_ROUTE=https://$(oc get routes guardrails-orchestrator-health -o jsonpath='{.spec.host}')
@@ -65,7 +62,7 @@ Should return:
 }
 ```
 
-## 7) Play around with the guardrails
+## 8) Play around with the guardrails
 By default, the auto-config will create two endpoints for us:
 
 * `/all/v1/chat/completions`: This endpoint will use **all** detector models in the namespace
