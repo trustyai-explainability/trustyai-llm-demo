@@ -12,7 +12,7 @@
 This will download the model binaries to your cluster and host them in an emulated S3-bucket:
 ```bash
 oc new-project model-namespace || oc project model-namespace
-oc apply -f model_storage_container 
+oc apply -f model_storage_container.yaml
 ```
 
 This will take a minute to spin up- once `oc get pods` reports 
