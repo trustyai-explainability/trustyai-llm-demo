@@ -1,9 +1,10 @@
 #   Troubleshooting
 
 ### ConnectionError when running [`../common/prompt.py`](../common/prompt.py)
-Ensure you have port-forwarding enabled in the background by running the following in another terminal tab.
+Ensure you have port-forwarding enabled for your model name (for example `phi3`) in the background by running the following in another terminal tab (replace `model_name` with the specific model name).
 ```sh
-oc port-forward $(oc get pods -o name | grep phi3) 8080:8080
+export MODEL_NAME=model_name  # Your model name, for example, `phi3`
+oc port-forward $(oc get pods -o name -n model-namespace | grep $MODEL_NAME | head -1) 8080:8080
 ```
 
 ### Pod unschedulable due to insufficient CPU
