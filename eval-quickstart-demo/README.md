@@ -16,15 +16,11 @@ You'll need to [set up your cluster for a GPU deployment.](https://github.com/tr
 ---
 
 ## 2. Deploy RHOAI
-Create a DSCInitialization `default-dsci` and subsequently a DataScienceCluster `default-dsc` by going to Operators > Installed Operators > Red Hat OpenShift AI / Open Data Hub Operator in the OpenShift console and going to the relevant tabs.
+Create a DSCInitialization `default-dsci` and subsequently a DataScienceCluster `default-dsc` by going to `Operators` > `Installed Operators` > `Red Hat OpenShift AI / Open Data Hub Operator` in the OpenShift console, then:
+* Navigate to the `DSCInitialization` tab, and then create the default `DSCInitialization`
+* Navigate to the `Data Science Cluster` tab, and create the default `DataScienceCluster`
 
-If you don't want to use the default data science cluster, use the one provided here:
-
-```sh
-oc apply -f dsc.yaml
-```
-
-*Note: this demo was tested on RHOAI 2.25.0, but any version after **2.16.1** _should_ work*
+*Note: this demo was most recently tested and verified on RHOAI 2.25.0*
 
 ---
 
