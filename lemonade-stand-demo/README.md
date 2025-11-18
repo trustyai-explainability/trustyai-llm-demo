@@ -7,22 +7,14 @@ agent so our customers can learn more about our products. We'll want to make sur
 the agent are family friendly, and that it does not promote our rival fruit juice vendors. 
 
 ---
-## 1. Install RHOAI and all prerequisite operators for a GPU model deployment
-You'll need to [set up your cluster for a GPU deployment](https://github.com/trustyai-explainability/reference/tree/main/llm-deployment/vllm#install-the-gpu-operators)
+## 1) Prerequisites
+1) Install the Red Hat Openshift AI operator
+2) Install the default `DSCInitialization` and `Data Science Cluster`
 
-### KServe Raw
-This demo requires the LLM to be deployed as a [KServe Raw deployment](https://access.redhat.com/solutions/7078183)
-
-1) From RHOAI operator menu, change servicemesh to `Removed` in the DSCI
+**Note: This demo was last tested and verified on RHOAI 2.25**
 
 ---
-## 2. Deploy RHOAI
-This DSC is configured to use a tailored set of images for this demo:
-
-`oc apply -f dsc.yaml`
-
----
-## 3. Deploy Models
+## 2) Deploy Models
 ```bash
 oc new-project model-namespace
 oc apply -f vllm/model_container.yaml
@@ -50,30 +42,28 @@ python3 ../common/prompt.py --url http://localhost:8080/v1/chat/completions --mo
 
 
 ---
-## 4. Guardrails
+## 3) Guardrails
 In the following section, we'll walk through the configurations that have been provided inside of the `guardrails` folder. Everything is already written for you, so there's no need to add anything to the yaml files unless you're trying to experiment!
 
-*If you want to skip the explanations and get straight to playing around, you can run:*
-```bash
-for file in guardrails/*.yaml; oc apply -f $file
-```
-
-### 4.1 Deploy the Hateful And Profane (HAP) language detector
+### 3.1) Deploy the Hateful And Profane (HAP) language detector
 This will use IBM's [Granite-Guardian-HAP-38m](https://huggingface.co/ibm-granite/granite-guardian-hap-38m) model, which is a small
 language model for detecting problematic speech.
 ```bash
-oc apply -f guardrails/hap_detector/hap_model_container.yaml
+oc apply -f guardrails/hap_model_container.yaml
 ```
 Wait for the `guardrails-container-deployment-hap-xxxx` pod to spin up
 
 ```bash
-oc apply -f guardrails/hap_detector/hap.yaml
+oc apply -f guardrails/hap.yaml
 ```
 Wait for the `guardrails-detector-ibm-haop-predictor-xxx` pod to spin up
 
 
-### 4.2) Configure the Guardrails Orchestrator
-Open `guardrails/configmap_orchestrator.yaml`. This is our configuration for the guardrails orchestrator:
+### 3.2) Configure the Guardrails Orchestrator
+The main component of the guardrails stack is the Guardrails Orchestrator. This manages all network
+ communication between the generative model and the various guardrails components.
+
+Open [guardrails/orchestrator.yaml](guardrails/orchestrator.yaml). This contains all of our configurations for our guardrails deployment. The first ConfigMap defined in the file contains our orchestrator configuration:
 
 ```yaml
   config.yaml: |
@@ -82,7 +72,7 @@ Open `guardrails/configmap_orchestrator.yaml`. This is our configuration for the
         hostname: phi3-predictor.model-namespace.svc.cluster.local
         port: 8080
     detectors:
-      regex_competitor:
+      built_in:
         type: text_contents
         service:
             hostname: "127.0.0.1"
@@ -100,32 +90,31 @@ Open `guardrails/configmap_orchestrator.yaml`. This is our configuration for the
 
 Here, we've defined the location of our `chat_generation` model server, and the locations of 
 our detector servers. The `hap` detector is reachable via the service that is created by the KServe
-deployment (`phi3-predictor.model-namespace.svc.cluster.local`), while our regex detector sidecar will be launched at `localhost:8080`- this will always
-be the case when using the regex detector sidecar. 
+deployment (`phi3-predictor.model-namespace.svc.cluster.local`) (step 3.1), while our built-in detector sidecar will be launched at `localhost:8080`- this will always be the case when using the built-in detector sidecar. 
 
 
-### 4.3) Configure our regex detector
-Open `guardrails/configmap_vllm_gateway.yaml`. This is where we can configure our local detectors and our "preset" guardrailing pipeines. 
+### 3.3) Configure our built-in detector
+The second configmap defined in [guardrails/orchestrator.yaml](guardrails/orchestrator.yaml) provides our guardrails gateway configuration- this is where we can configure our local detectors and our "preset" guardrailing pipeines. 
 
-On line 19, we've used the following regex pattern to filter out converstations about our rival juice vendors:
+On line 43, we've used the following regex pattern to filter out conversations about our rival juice vendors:
 ```regexp
 \b(?i:apple|cranberry|grape|orange|pineapple|)\b
 ```
 This will flag anything that matches that regex pattern as a detection- in this case, any mention of the words `apple`, `cranberry`, `grape`, `orange`, or `pineapple` regardless of case.
 
 
-### 4.4) Configure the Guardrails Gateway
-Again, looking inside  `guardrails/configmap_vllm_gateway.yaml`:
+### 3.4) Configure the Guardrails Gateway
+Again, looking inside  [guardrails/orchestrator.yaml](guardrails/orchestrator.yaml):
 
 The guardrails gateway provides two main features:
 1) It provides the OpenAI `v1/chat/completions` API, which lets you hotswap between unguardrailed and guardrailed models
 2) It lets you create guardrail "presets" baked into the endpoint.
 
 #### Detectors 
-First, we've set up the detectors that we want to use:
+First, we've set up the detectors that we want to use (lines 37 to 47):
 ```yaml
  detectors:
-  - name: regex_competitor
+  - name: built_in
     input: true
     output: true
     detector_params:
@@ -142,12 +131,12 @@ detectors. If you want to run a detector on only input or only output, you can c
 detector, we define the specific regex that we described earlier.
 
 #### Defining Presets
-Next, we've created three preset pipelines for those detectors:
+Next, we've created three preset pipelines for those detectors (line 48 onwards):
 ```yaml
 routes:
   - name: all
     detectors:
-      - regex_competitor
+      - built_in
       - hap
   - name: hap
     detectors:
@@ -157,31 +146,13 @@ routes:
 ```
 First is `all`, which will be served at `$GUARDRAILS_GATEWAY_URL/all/v1/chat/completions`, which will use both the `regex_competitor` and `hap` detectors. Next is `hap` will just uses the `hap` detector, and finally we have the `passthrough` preset, which does not use any detectors. 
 
-### 4.5) Applying the ConfigMaps
-Now that we've explored the configuration, let's deploy the configmap:
+### 3.5) Deploy the Guardrails Orchestrator
+This will deploy all of our configurations and create a Guardrails Orchestrator pod:
 ```bash
-oc apply -f guardrails/configmap_vllm_gateway.yaml
+oc apply -f guardrails/orchestrator.yaml
 ```
 
-Now, we can apply the final two configmaps needed to configure the orchestrator:
-```bash
-oc apply -f guardrails/configmap_auxiliary_images.yaml
-oc apply -f guardrails/configmap_orchestrator.yaml
-
-```
-
-Right now, the TrustyAI operator does not yet automatically create a route to the guardrails-vLLM-gateway, so let's do that manually:
-
-```bash
-oc apply -f guardrails/gateway_route.yaml
-```
-
-### 4.6) Deploy the Orchestrator
-```bash
-oc apply -f guardrails/orchestrator_cr.yaml
-```
-
-### 4.7) Check the Orchestrator Health
+### 3.6) Check the Orchestrator Health
 ```bash
 ORCH_ROUTE_HEALTH=$(oc get routes guardrails-orchestrator-health -o jsonpath='{.spec.host}')
 curl -s https://$ORCH_ROUTE_HEALTH/info | jq
@@ -205,7 +176,7 @@ If everything is okay, it should return:
 ```
 
 ---
-## 5 Have a play around with Guardrails!
+## 4 Have a play around with Guardrails!
 ```bash
 GUARDRAILS_GATEWAY=https://$(oc get routes guardrails-gateway -o jsonpath='{.spec.host}')
 RAW_MODEL=http://localhost:8080
