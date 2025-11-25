@@ -1,0 +1,29 @@
+apiVersion: llamastack.io/v1alpha1
+kind: LlamaStackDistribution
+metadata:
+  name: lls-fms-safety-provider-v1
+spec:
+  replicas: 1
+  server:
+    containerSpec:
+      env:
+        - name: VLLM_URL
+          value: ${VLLM_URL}
+        - name: INFERENCE_MODEL
+          value: ${INFERENCE_MODEL}
+        - name: VLLM_API_TOKEN
+          value: ${VLLM_API_TOKEN}
+        - name: VLLM_TLS_VERIFY
+          value: "false"
+        - name: MILVUS_DB_PATH
+          value: ~/.llama/milvus.db
+        - name: FMS_ORCHESTRATOR_URL
+          value: "${FMS_ORCHESTRATOR_URL}"
+      name: llama-stack
+      port: 8321
+    distribution:
+      # name: rh-dev -- the default image has lls 0.22.2 and we need something with lls 0.3.0
+      image: quay.io/opendatahub/llama-stack:rhoai-v3.0-latest
+      # image: quay.io/rh-ee-mmisiura/lls:fms_0.3.0_trials
+    storage:
+      size: 20Gi
