@@ -1,21 +1,23 @@
+# NeMo-Guardrails Quickstart
 ## Deploy Model
-```bash
+```shell
 oc apply -f model_storage_container.yaml # wait for this to spin up
 ```
 
-```bash
+```shell
 oc apply -f phi3.yaml # wait for this to spin up
 ```
 
 ## Deploy NeMo Guardrails
-```bash
-oc create secret generic api-token-secret --from-literal=token=$(oc whoami -t)
+```shell
+oc apply -f serviceaccount.yaml
+oc create secret generic api-token-secret --from-literal=token=$(oc create token nemo-guardrails-service-account --duration=8760h)
 oc apply -f nemo.yaml
 ```
 
 ## Safe Request
 (The first request will take a little while the NeMo Guardrails server downloads some artifacts)
-```bash
+```shell
  GUARDRAILS_ROUTE=https://$(oc get routes/nemo-guardrails -o json  -o jsonpath='{.status.ingress[0].host}')
 curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
   -H "Content-Type: application/json" \
@@ -26,7 +28,7 @@ curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
 
 ## Disallowed Requests
 ### Forbidden input: "violence"
-```bash
+```shell
 curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(oc whoami -t)" \
@@ -35,7 +37,7 @@ curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
 > `{"messages":[{"role":"assistant","content":"I can't help with that type of request. Please ask something else."}] `
 
 ### Forbidden input: "ChatGPT"
-```bash
+```shell
 curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(oc whoami -t)" \
@@ -44,7 +46,7 @@ curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
 > `{"messages":[{"role":"assistant","content":"I can't help with that type of request. Please ask something else."}] `
 
 ### Forbidden output: name
-```bash
+```shell
 curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(oc whoami -t)" \
@@ -58,7 +60,7 @@ curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
 
 
 ### Forbidden input: Too long
-```bash
+```shell
 curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(oc whoami -t)" \

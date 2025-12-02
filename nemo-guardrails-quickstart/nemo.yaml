@@ -87,8 +87,13 @@ apiVersion: trustyai.opendatahub.io/v1alpha1
 kind: NemoGuardrails
 metadata:
   name: nemo-guardrails
+  annotations:
+    security.opendatahub.io/enable-auth: 'true'
 spec:
-  nemoConfig: "nemo-config"
+  nemoConfigs:
+    - name: nemo-config
+      configMaps:
+        - nemo-config
   env:
     - name: "OPENAI_API_KEY"
       valueFrom:
