@@ -53,7 +53,7 @@ for file in guardrails/*.yaml; oc apply -f $file
 ```
 
 ### 4.1 Deploy the Hateful And Profane (HAP) language detector
-This will use IBM's [Granite-Guadrian-HAP-38m](https://huggingface.co/ibm-granite/granite-guardian-hap-38m) model, which is a small
+This will use IBM's [Granite-Guardian-HAP-38m](https://huggingface.co/ibm-granite/granite-guardian-hap-38m) model, which is a small
 language model for detecting problematic speech.
 ```bash
 oc apply -f guardrails/hap_detector/hap_model_container.yaml
