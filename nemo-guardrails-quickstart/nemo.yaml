@@ -6,7 +6,7 @@ data:
   config.yaml: |
     models:
       - type: main
-        engine: vllm_openai
+        engine: openai
         parameters:
           openai_api_base: "https://phi3-predictor.model-namespace.svc.cluster.local:8443/v1"
           model_name: "phi3"
