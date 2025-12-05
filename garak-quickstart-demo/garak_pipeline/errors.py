@@ -1,6 +1,3 @@
-"""Custom error classes for Garak pipeline"""
-
-
 class GarakError(Exception):
     """Base exception for Garak errors"""
     pass

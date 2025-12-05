@@ -5,32 +5,19 @@ description = "Garak security scanning demo on Kubeflow Pipelines"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    # Garak security scanning
+    "kfp>=2.14.6",
+    "kfp-kubernetes>=2.14.6",
+    "kfp-server-api>=2.14.6",
+    "kubernetes>=30.0.0",
+    "pydantic-settings>=2.11.0",
+    "python-dotenv>=1.2.1",
+    "boto3>=1.35.88",
+    "requests",
+    "avidtools==0.1.2",
+    "pandas>=2.3.3",
+    "numpy>=1.26.4",
     "garak==0.12.0",
-    
-    # Kubeflow Pipelines
-    "kfp==2.14.3",
-    "kfp-kubernetes==2.14.3",
-    "kfp-server-api==2.14.3",
-    
-    # Configuration management
-    "pydantic",
-    "pydantic-settings",
-    "python-dotenv",
-    
-    # Storage
-    "boto3==1.40.27",
-    
-    # Kubernetes
-    "kubernetes==30.1.0",
-    
-    # UI/Display
     "rich",
-    "tqdm",
-    
-    # Notebook support
-    "ipykernel",
-    "jupyter",
 ]
 [dependency-groups]
 dev = [
