@@ -1,0 +1,29 @@
+{
+  "shield_id": "trustyai_input",
+  "provider_shield_id": "trustyai_input",
+  "provider_id": "trustyai_fms",
+  "params": {
+    "type": "content",
+    "detector_url": "https://custom-guardrails-service:8480",
+    "confidence_threshold": 0.5,
+    "detector_params": {
+      "custom": {
+        "input_guardrail": {
+          "input_policies": [
+            "jailbreak",
+            "content-moderation",
+            "pii"
+          ],
+          "guardrail_model": "vllm/phi4",
+          "guardrail_model_token": "${VLLM_TOKEN}",
+          "guardrail_model_url": "http://${LLS_ROUTE}/v1/chat/completions"
+        }
+      }
+    },
+    "message_types": [
+      "user"
+    ],
+    "verify_ssl": false,
+    "auth_token": "${FMS_TOKEN}"
+  }
+}

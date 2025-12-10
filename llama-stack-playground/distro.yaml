@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llama-stack-config
+data:
+  run.yaml: |
+    # Llama Stack Configuration
+    version: '2'
+    image_name:  lls-fms-distro
+    apis:
+    - inference
+    - safety
+    - shields
+    providers:
+      inference:
+      - provider_id: vllm
+        provider_type: "remote::vllm"
+        config:
+          url: "https://phi4-predictor:8443/v1"
+          tls_verify: false
+          api_token: "${VLLM_TOKEN}"
+      safety:
+        - provider_id: trustyai_fms
+          module: llama_stack_provider_trustyai_fms==0.3.4
+          provider_type: remote::trustyai_fms
+          config:
+            shields: {}
+    registered_resources:
+      models:
+        - metadata: {}
+          model_id: "phi4"
+          provider_model_id: phi4
+          provider_id: vllm
+          model_type: llm
+    server:
+      port: 8321
+    storage:
+      backends:
+        kv_agents:
+          db_path: /opt/app-root/src/.llama/distributions/rh/agents_store.db
+          type: kv_sqlite
+        kv_datasetio_huggingface:
+          db_path: /opt/app-root/src/.llama/distributions/rh/huggingface_datasetio.db
+          type: kv_sqlite
+        kv_datasetio_localfs:
+          db_path: /opt/app-root/src/.llama/distributions/rh/localfs_datasetio.db
+          type: kv_sqlite
+        kv_default:
+          db_path: /opt/app-root/src/.llama/distributions/rh/kvstore.db
+          type: kv_sqlite
+        kv_faiss:
+          db_path: /opt/app-root/src/.llama/distributions/rh/faiss.db
+          type: kv_sqlite
+        kv_milvus_inline:
+          db_path: /opt/app-root/src/.llama/distributions/rh/milvus_inline_registry.db
+          type: kv_sqlite
+        kv_milvus_remote:
+          db_path: /opt/app-root/src/.llama/distributions/rh/milvus_remote_registry.db
+          type: kv_sqlite
+        sql_agents:
+          db_path: /opt/app-root/src/.llama/distributions/rh/responses_store.db
+          type: sql_sqlite
+        sql_default:
+          db_path: /opt/app-root/src/.llama/distributions/rh/sql_store.db
+          type: sql_sqlite
+        sql_files:
+          db_path: /opt/app-root/src/.llama/distributions/rh/files_metadata.db
+          type: sql_sqlite
+        sql_inference:
+          db_path: /opt/app-root/src/.llama/distributions/rh/inference_store.db
+          type: sql_sqlite
+      stores:                                                                                                      
+        conversations:                                                                                             
+          backend: sql_default                                                                                     
+          table_name: openai_conversations                                                                         
+        inference:                                                                                                 
+          backend: sql_inference                                                                                   
+          max_write_queue_size: 10000                                                                              
+          num_writers: 4                                                                                           
+          table_name: inference_store                                                                              
+        metadata:                                                                                                  
+          backend: kv_default                                                                                      
+          namespace: registry
+---
+apiVersion: llamastack.io/v1alpha1
+kind: LlamaStackDistribution
+metadata:
+  name: lls-fms
+spec:
+  replicas: 1
+  server:
+    containerSpec:
+      env:
+        - name: MILVUS_DB_PATH
+          value: ~/.llama/milvus.db
+        - name: LLAMA_STACK_LOGGING
+          value: all=debug
+      name: llama-stack
+      port: 8321
+    userConfig:
+      configMapName: llama-stack-config
+    distribution:
+      image: quay.io/rgeada/ls-debug:latest
+      imagePullPolicy: Always
+    storage:
+      size: 20Gi

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardrails-service-account
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: guardrails-service-account-view
+subjects:
+  - kind: ServiceAccount
+    name: guardrails-service-account
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+---
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: GuardrailsOrchestrator
+metadata:
+  name: custom-guardrails
+  annotations:
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  enableBuiltInDetectors: true
+  enableGuardrailsGateway: false
+  disableOrchestrator: true
+  customDetectorsConfig: custom-detectors
+  replicas: 1
