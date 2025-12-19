@@ -22,7 +22,8 @@ spec:
         - '--served-model-name={{.Name}}'
         - '--dtype=float16'
         - '--enforce-eager'
-        - '--max-model-len=98064'
+        - '--max-model-len=40960'
+        - '--tensor-parallel-size=2'
       command:
         - python
         - '-m'
@@ -53,11 +54,11 @@ spec:
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: phi4
+  name: qwen3
   labels:
     opendatahub.io/dashboard: 'true'
   annotations:
-    openshift.io/display-name: phi4
+    openshift.io/display-name: qwen3
     serving.knative.openshift.io/enablePassthrough: 'true'
     security.opendatahub.io/enable-auth: 'true'
     serving.kserve.io/deploymentMode: RawDeployment
@@ -75,15 +76,15 @@ spec:
         limits:
           cpu: '2'
           memory: 8Gi
-          nvidia.com/gpu: '1'
+          nvidia.com/gpu: '2'
         requests:
           cpu: '2'
           memory: 8Gi
-          nvidia.com/gpu: '1'
+          nvidia.com/gpu: '2'
       runtime: vllm-runtime
       storage:
         key: aws-connection-data-connection
-        path: Phi-4-mini-instruct
+        path: Qwen3-8B
     tolerations:
       - effect: NoSchedule
         key: nvidia.com/gpu

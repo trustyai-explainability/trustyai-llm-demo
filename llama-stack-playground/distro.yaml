@@ -11,27 +11,68 @@ data:
     - inference
     - safety
     - shields
+    - agents
+    - vector_io
+    - tool_runtime     
     providers:
+      agents:                                                                                                      
+      - config:                                                                                                    
+          persistence:                                                                                             
+            agent_state:                                                                                           
+              backend: kv_agents                                                                                   
+              namespace: agents::meta_reference                                                                    
+            responses:                                                                                             
+              backend: sql_agents                                                                                  
+              max_write_queue_size: 10000                                                                          
+              num_writers: 4                                                                                       
+              table_name: agents_responses                                                                         
+        provider_id: meta-reference                                                                                
+        provider_type: inline::meta-reference     
       inference:
       - provider_id: vllm
         provider_type: "remote::vllm"
         config:
-          url: "https://phi4-predictor:8443/v1"
+          url: "https://qwen3-predictor:8443/v1"
           tls_verify: false
-          api_token: "${VLLM_TOKEN}"
+          api_token: "${TOKEN}"
       safety:
         - provider_id: trustyai_fms
-          module: llama_stack_provider_trustyai_fms==0.3.4
+          module: llama_stack_provider_trustyai_fms==0.3.2
           provider_type: remote::trustyai_fms
           config:
-            shields: {}
+            shields:
+              trustyai_input:
+                type: content
+                detector_url: "https://custom-guardrails-service:8480"
+                detector_params:
+                  custom: 
+                    input_guardrail:
+                      input_policies: [jailbreak, content-moderation, pii]
+                      guardrail_model: vllm/qwen3
+                      guardrail_model_token: "${TOKEN}"
+                      guardrail_model_url: "http://lls-route-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com/v1/chat/completions"
+                message_types: ["user"]
+                verify_ssl: false
+                auth_token: "${TOKEN}"
+              trustyai_output:
+                type: content
+                detector_url: "https://custom-guardrails-service:8480"
+                detector_params:
+                  custom: 
+                    output_guardrail:
+                      output_policies: [jailbreak, content-moderation, pii]
+                      guardrail_model: vllm/qwen3
+                      guardrail_model_token: "${TOKEN}"
+                      guardrail_model_url: "http://lls-route-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com/v1/chat/completions"
+                message_types: ["user", "completion"]
+                verify_ssl: false
+                auth_token: "${TOKEN}"
     registered_resources:
-      models:
-        - metadata: {}
-          model_id: "phi4"
-          provider_model_id: phi4
-          provider_id: vllm
-          model_type: llm
+      shields:
+        - shield_id: trustyai_input
+          provider_id: trustyai_fms
+        - shield_id: trustyai_output
+          provider_id: trustyai_fms
     server:
       port: 8321
     storage:
@@ -81,6 +122,31 @@ data:
         metadata:                                                                                                  
           backend: kv_default                                                                                      
           namespace: registry
+      vector_io:                                                                                                   
+      - config:                                                                                                    
+          db_path: /opt/app-root/src/.llama/distributions/rh/milvus.db                                             
+          persistence:                                                                                             
+            backend: kv_milvus_inline                                                                              
+            namespace: vector_io::milvus                                                                           
+        provider_id: milvus                                                                                        
+        provider_type: inline::milvus
+      tool_runtime:                                                                                                
+      - config:                                                                                                    
+          api_key: '********'                                                                                      
+          max_results: 3                                                                                           
+        provider_id: brave-search                                                                                  
+        provider_type: remote::brave-search                                                                        
+      - config:                                                                                                    
+          api_key: '********'                                                                                      
+          max_results: 3                                                                                           
+        provider_id: tavily-search                                                                                 
+        provider_type: remote::tavily-search                                                                       
+      - config: {}                                                                                                 
+        provider_id: rag-runtime                                                                                   
+        provider_type: inline::rag-runtime                                                                         
+      - config: {}                                                                                                 
+        provider_id: model-context-protocol                                                                        
+        provider_type: remote::model-context-protocol
 ---
 apiVersion: llamastack.io/v1alpha1
 kind: LlamaStackDistribution
@@ -93,14 +159,16 @@ spec:
       env:
         - name: MILVUS_DB_PATH
           value: ~/.llama/milvus.db
-        - name: LLAMA_STACK_LOGGING
-          value: all=debug
+        - name: VLLM_URL
+          value: https://qwen3-predictor:8443/v1
+        - name: INFERENCE_MODEL
+          value: qwen3
       name: llama-stack
       port: 8321
     userConfig:
       configMapName: llama-stack-config
     distribution:
-      image: quay.io/rgeada/ls-debug:latest
+      image: quay.io/rh-ee-mmisiura/lls:fms_dynamic_reg_bugs
       imagePullPolicy: Always
     storage:
       size: 20Gi
