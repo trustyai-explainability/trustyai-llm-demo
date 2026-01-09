@@ -54,9 +54,7 @@ curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $(oc whoami -t)" \
   -d '{"messages":[{"role":"user","content": "In just two words, provide a typical American first and last name."}]}'
-{"messages":[{"role":"assistant","content":"I don't know the answer to that."}]}
 ```
-
 > `{"messages":[{"role":"assistant","content":"I don't know the answer to that."}]}`
 
 (The unguardrailed output is "John Smith")
