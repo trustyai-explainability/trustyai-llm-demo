@@ -35,7 +35,7 @@ data:
       host: "localhost"
       port: 8032
     detectors:
-      - name:built_in
+      - name: built_in
         input: true
         output: true
         detector_params:
