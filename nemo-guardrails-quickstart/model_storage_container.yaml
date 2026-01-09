@@ -114,15 +114,15 @@ type: Opaque
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: user-one
+  name: nemo-guardrails-service-account
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: user-one-view
+  name: nemo-guardrails-service-account-viewº
 subjects:
   - kind: ServiceAccount
-    name: user-one
+    name: nemo-guardrails-service-account
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
