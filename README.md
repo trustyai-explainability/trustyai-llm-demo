@@ -3,7 +3,8 @@
 
 
 ## 👩‍🔬 Evaluation Demos 📊
-* [Evaluation Quickstart](./eval-quickstart-demo/README.md): This demo will quickly get you started running an evaluation against a deployed model. 
+* [Evaluation Quickstart](./eval-quickstart-demo/README.md): This demo will quickly get you started running an evaluation against a deployed model.
+* [Garak Quickstart](./garak-quickstart-demo/README.md): Run Garak security scans on Kubeflow Pipelines to test LLMs for vulnerabilities.
 
 
 ## 💂🏿‍♀️ Guardrail Demos 🛡️
