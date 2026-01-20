@@ -1,0 +1,12 @@
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: GuardrailsOrchestrator
+metadata:
+  name: custom-guardrails
+  annotations:
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  enableBuiltInDetectors: true
+  enableGuardrailsGateway: false
+  disableOrchestrator: true
+  customDetectorsConfig: custom-detectors
+  replicas: 1
