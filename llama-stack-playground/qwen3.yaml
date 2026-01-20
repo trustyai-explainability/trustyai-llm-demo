@@ -22,8 +22,9 @@ spec:
         - '--served-model-name={{.Name}}'
         - '--dtype=float16'
         - '--enforce-eager'
-        - '--max-model-len=40960'
+        - '--max-model-len=8192'
         - '--tensor-parallel-size=2'
+        - '--gpu-memory-utilization=0.85'
       command:
         - python
         - '-m'
@@ -48,7 +49,7 @@ spec:
   volumes:
     - emptyDir:
         medium: Memory
-        sizeLimit: 2Gi
+        sizeLimit: 8Gi
       name: shm
 ---
 apiVersion: serving.kserve.io/v1beta1
@@ -75,11 +76,11 @@ spec:
       resources:
         limits:
           cpu: '2'
-          memory: 8Gi
+          memory: 24Gi
           nvidia.com/gpu: '2'
         requests:
           cpu: '2'
-          memory: 8Gi
+          memory: 24Gi
           nvidia.com/gpu: '2'
       runtime: vllm-runtime
       storage:

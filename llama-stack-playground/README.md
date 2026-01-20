@@ -135,7 +135,7 @@ The output shield configuration is identical to the input shield configuration.
 ---
 ## Create the llama-stack distro
 ```shell
-export TOKEN=$(oc whoami -t)
+export TOKEN=$(oc create token guardrails-service-account --duration=8760h)
 envsubst < distro.yaml | oc apply -f -
 ```
 

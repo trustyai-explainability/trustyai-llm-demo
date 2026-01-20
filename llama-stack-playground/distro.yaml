@@ -3,13 +3,14 @@ kind: ConfigMap
 metadata:
   name: llama-stack-config
 data:
-  run.yaml: |
+  config.yaml: |
     # Llama Stack Configuration
     version: '2'
     image_name:  lls-fms-distro
     apis:
     - inference
     - safety
+    - files
     - shields
     - agents
     - vector_io
@@ -28,11 +29,19 @@ data:
               table_name: agents_responses                                                                         
         provider_id: meta-reference                                                                                
         provider_type: inline::meta-reference     
+      files:                                                                                                       
+        - config:                                                                                                    
+            metadata_store:                                                                                          
+              backend: sql_default                                                                                   
+              table_name: files_metadata                                                                             
+            storage_dir: /.llama/distributions/rh/files                                             
+          provider_id: meta-reference-files                                                                          
+          provider_type: inline::localfs        
       inference:
       - provider_id: vllm
         provider_type: "remote::vllm"
         config:
-          url: "https://qwen3-predictor:8443/v1"
+          base_url: "https://qwen3-predictor:8443/v1"
           tls_verify: false
           api_token: "${TOKEN}"
       safety:
@@ -78,37 +87,37 @@ data:
     storage:
       backends:
         kv_agents:
-          db_path: /opt/app-root/src/.llama/distributions/rh/agents_store.db
+          db_path: /.llama/distributions/rh/agents_store.db
           type: kv_sqlite
         kv_datasetio_huggingface:
-          db_path: /opt/app-root/src/.llama/distributions/rh/huggingface_datasetio.db
+          db_path: /.llama/distributions/rh/huggingface_datasetio.db
           type: kv_sqlite
         kv_datasetio_localfs:
-          db_path: /opt/app-root/src/.llama/distributions/rh/localfs_datasetio.db
+          db_path: /.llama/distributions/rh/localfs_datasetio.db
           type: kv_sqlite
         kv_default:
-          db_path: /opt/app-root/src/.llama/distributions/rh/kvstore.db
+          db_path: /.llama/distributions/rh/kvstore.db
           type: kv_sqlite
         kv_faiss:
-          db_path: /opt/app-root/src/.llama/distributions/rh/faiss.db
+          db_path: /.llama/distributions/rh/faiss.db
           type: kv_sqlite
         kv_milvus_inline:
-          db_path: /opt/app-root/src/.llama/distributions/rh/milvus_inline_registry.db
+          db_path: /.llama/distributions/rh/milvus_inline_registry.db
           type: kv_sqlite
         kv_milvus_remote:
-          db_path: /opt/app-root/src/.llama/distributions/rh/milvus_remote_registry.db
+          db_path: /.llama/distributions/rh/milvus_remote_registry.db
           type: kv_sqlite
         sql_agents:
-          db_path: /opt/app-root/src/.llama/distributions/rh/responses_store.db
+          db_path: /.llama/distributions/rh/responses_store.db
           type: sql_sqlite
         sql_default:
-          db_path: /opt/app-root/src/.llama/distributions/rh/sql_store.db
+          db_path: /.llama/distributions/rh/sql_store.db
           type: sql_sqlite
         sql_files:
-          db_path: /opt/app-root/src/.llama/distributions/rh/files_metadata.db
+          db_path: /.llama/distributions/rh/files_metadata.db
           type: sql_sqlite
         sql_inference:
-          db_path: /opt/app-root/src/.llama/distributions/rh/inference_store.db
+          db_path: /.llama/distributions/rh/inference_store.db
           type: sql_sqlite
       stores:                                                                                                      
         conversations:                                                                                             
@@ -124,7 +133,7 @@ data:
           namespace: registry
       vector_io:                                                                                                   
       - config:                                                                                                    
-          db_path: /opt/app-root/src/.llama/distributions/rh/milvus.db                                             
+          db_path: /.llama/distributions/rh/milvus.db                                             
           persistence:                                                                                             
             backend: kv_milvus_inline                                                                              
             namespace: vector_io::milvus                                                                           
@@ -168,7 +177,7 @@ spec:
     userConfig:
       configMapName: llama-stack-config
     distribution:
-      image: quay.io/rh-ee-mmisiura/lls:fms_dynamic_reg_bugs
+      image: quay.io/opendatahub/llama-stack:latest
       imagePullPolicy: Always
     storage:
       size: 20Gi
