@@ -40,7 +40,7 @@ data:
           provider_id: meta-reference-files                                                                          
           provider_type: inline::localfs        
       inference:
-      - provider_id: vllm-qwen
+      - provider_id: vllm
         provider_type: "remote::vllm"
         config:
           base_url: "https://qwen3-predictor:8443/v1"
@@ -64,6 +64,19 @@ data:
                 detector_params:
                   custom: 
                     input_guardrail:
+                      input_policies: [jailbreak, content-moderation, pii, policy]
+                      guardrail_model: vllm/qwen3
+                      guardrail_model_token: "${TOKEN}"
+                      guardrail_model_url: "http://lls-route-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com/v1/chat/completions"
+                message_types: ["user"]
+                verify_ssl: false
+                auth_token: "${TOKEN}"
+              trustyai_input_no_policy:
+                type: content
+                detector_url: "https://custom-guardrails-service:8480"
+                detector_params:
+                  custom: 
+                    input_guardrail:
                       input_policies: [jailbreak, content-moderation, pii]
                       guardrail_model: vllm/qwen3
                       guardrail_model_token: "${TOKEN}"
@@ -77,7 +90,7 @@ data:
                 detector_params:
                   custom: 
                     output_guardrail:
-                      output_policies: [jailbreak, content-moderation, pii]
+                      output_policies: [jailbreak, content-moderation, pii, policy]
                       guardrail_model: vllm/qwen3
                       guardrail_model_token: "${TOKEN}"
                       guardrail_model_url: "http://lls-route-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com/v1/chat/completions"
@@ -94,6 +107,8 @@ data:
         model_type: embedding
       shields:
         - shield_id: trustyai_input
+          provider_id: trustyai_fms
+        - shield_id: trustyai_input_no_policy
           provider_id: trustyai_fms
         - shield_id: trustyai_output
           provider_id: trustyai_fms

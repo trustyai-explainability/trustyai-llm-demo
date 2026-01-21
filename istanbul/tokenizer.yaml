@@ -88,12 +88,3 @@ spec:
       - effect: NoSchedule
         key: nvidia.com/gpu
         operator: Exists
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-            - key: nvidia.com/gpu.family
-              operator: In
-              values:
-              - turing

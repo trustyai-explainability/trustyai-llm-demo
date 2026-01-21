@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+      name: dataset-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: eval-dataset-storage-pod
+spec:
+  containers:
+  - name: dataset-container
+    image: 'quay.io/prometheus/busybox:latest'
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - mountPath: "/data/upload_files"
+      name: dataset-storage
+  volumes:
+  - name: dataset-storage
+    persistentVolumeClaim:
+      claimName: dataset-pvc
