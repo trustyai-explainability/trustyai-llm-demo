@@ -55,6 +55,22 @@ spec:
             - bash
             - -c
             - |
+              mkdir -p /mnt/models/llms/datasets
+              tmp/venv/bin/python3 << 'PYEOF'
+              import pandas as pd
+              
+              datasets = [
+                ["Linq-AI-Research", "FinDER", "data/train-00000-of-00001.parquet"],
+                ["Salesforce", "FinEval", "CRA-Bigdata/test-00000-of-00001.parquet"],
+              ]
+              
+              for repo, dataset_name, dataset in datasets:
+                print(f"Downloading {repo}/{dataset_name}")
+                df = pd.read_parquet(f"hf://datasets/{repo}/{dataset_name}/{dataset}")
+                df.to_json(f"/mnt/models/llms/datasets/{dataset_name}.jsonl", orient="records", lines=True)
+              print("All datasets downloaded!")
+              PYEOF
+
               models=(
                 Qwen/Qwen3-8B
                 sentence-transformers/all-MiniLM-L6-v2
@@ -64,7 +80,7 @@ spec:
                 echo "Downloading $model"
                 /tmp/venv/bin/huggingface-cli download $model --local-dir /mnt/models/llms/$(basename $model)
               done
-              echo "Done!"
+              echo "All models downloaded!"
           resources:
             limits:
               memory: "2Gi"

@@ -12,12 +12,38 @@ data:
     - inference
     - safety
     - files
+    - eval
     - shields
     - agents
     - vector_io
     - tool_runtime   
     - files 
     providers:
+      eval:
+        - provider_id: ${env.KUBEFLOW_LLAMA_STACK_URL:+trustyai_ragas_remote}
+          provider_type: remote::trustyai_ragas
+          module: llama_stack_provider_ragas.remote
+          config:
+            embedding_model: ${env.EMBEDDING_MODEL}
+            kubeflow_config:
+              results_s3_prefix: ${env.KUBEFLOW_RESULTS_S3_PREFIX}
+              s3_credentials_secret_name: ${env.KUBEFLOW_S3_CREDENTIALS_SECRET_NAME}
+              pipelines_endpoint: ${env.KUBEFLOW_PIPELINES_ENDPOINT}
+              namespace: ${env.KUBEFLOW_NAMESPACE}
+              llama_stack_url: ${env.KUBEFLOW_LLAMA_STACK_URL}
+              base_image: ${env.KUBEFLOW_BASE_IMAGE}
+              pipelines_api_token: ${env.KUBEFLOW_PIPELINES_TOKEN:=}
+            kvstore:
+              namespace: ragas
+              backend: kv_default
+        - provider_id: ${env.EMBEDDING_MODEL:+trustyai_ragas_inline}
+          provider_type: inline::trustyai_ragas
+          module: llama_stack_provider_ragas.inline
+          config:
+            embedding_model: ${env.EMBEDDING_MODEL}
+            kvstore:
+              namespace: ragas
+              backend: kv_default
       agents:                                                                                                      
       - config:                                                                                                    
           persistence:                                                                                             
