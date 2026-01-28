@@ -5,7 +5,7 @@ test_split: test
 output_type: generate_until
 doc_to_text: query
 doc_to_choice: ["good", "bad"]
-doc_to_target: answer
+doc_to_target: "{{['good', 'bad'][answer_index]}}"
 generation_kwargs:
   until:
     - "</s>"
