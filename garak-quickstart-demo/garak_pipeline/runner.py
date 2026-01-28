@@ -438,7 +438,10 @@ class PipelineRunner:
         
         if benchmark_config.generate_autodan is not None:
             command.extend(["--generate_autodan", benchmark_config.generate_autodan])
-        
+
+        if benchmark_config.taxonomy is not None:
+            command.extend(["--taxonomy", benchmark_config.taxonomy])
+
         # Add probes or taxonomy filters
         if benchmark_config.is_taxonomy_based:
             command.extend(["--probe_tags", ','.join(benchmark_config.taxonomy_filters)])
@@ -604,6 +607,64 @@ class PipelineRunner:
             raise RuntimeError(f"Job {job_id} failed")
         else:
             return None  # Job still running
+
+    def download_html_report(self, job_id: str, output_path: Optional[str] = None) -> str:
+        """Download the HTML report to a local file
+        
+        Args:
+            job_id: Job identifier
+            output_path: Local file path to save the report (default: scan_report_{job_id}.html)
+            
+        Returns:
+            Path to the downloaded file
+        """
+        from botocore.exceptions import ClientError
+        from pathlib import Path
+        
+        if (job := self.scan_jobs.get(job_id)) is None:
+            raise RuntimeError(f"Job {job_id} not found")
+        
+        if self._s3_prefix:
+            key = f"{self._s3_prefix}/{job_id}/scan.report.html"
+        else:
+            key = f"{job_id}/scan.report.html"
+        
+        # Default output path
+        if output_path is None:
+            output_path = f"scan_report_{job_id}.html"
+        
+        try:
+            if not self.s3_client:
+                self._create_s3_client()
+            
+            logger.info(f"Downloading HTML report from s3://{self._s3_bucket}/{key}")
+            
+            response = self.s3_client.get_object(Bucket=self._s3_bucket, Key=key)
+            html_content = response['Body'].read()
+            
+            # Write to file
+            output_file = Path(output_path)
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(output_file, 'wb') as f:
+                f.write(html_content)
+            
+            logger.info(f"HTML report saved to: {output_file.absolute()}")
+            return str(output_file.absolute())
+            
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            if error_code == 'NoSuchKey':
+                logger.error(
+                    f"HTML report not found at s3://{self._s3_bucket}/{key}. "
+                    f"The scan may not have generated an HTML report."
+                )
+            else:
+                logger.error(f"S3 error downloading HTML report: [{error_code}] {e}")
+            raise RuntimeError(f"Failed to download HTML report: {e}") from e
+        except Exception as e:
+            logger.error(f"Failed to download HTML report: {e}")
+            raise RuntimeError(f"Failed to download HTML report: {e}") from e
 
     def job_cancel(self, job_id: str) -> None:
         """Cancel a running scan job

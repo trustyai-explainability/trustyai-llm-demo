@@ -43,6 +43,11 @@ scan_files/
 *.report.jsonl
 *.log
 
+# Downloaded HTML reports
+reports/
+scan_report_*.html
+*.report.html
+
 # Compiled pipeline
 *.yaml
 !**/manifests/*.yaml

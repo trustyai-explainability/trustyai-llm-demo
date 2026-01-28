@@ -123,6 +123,13 @@ class BenchmarkConfig(BaseModel):
         description="URL to documentation for this benchmark"
     )
 
+    # Reporting
+    taxonomy: Optional[str] = Field(
+        default=None,
+        description="MISP top-level taxonomy for grouping probes while reporting",
+        examples=["owasp", "avid-effect"]
+    )
+
     @model_validator(mode='after')
     def validate_probe_or_taxonomy(self):
         """Ensure either probes or taxonomy_filters is specified, but not both."""
@@ -183,6 +190,7 @@ PREDEFINED_BENCHMARKS: Dict[str, BenchmarkConfig] = {
         taxonomy_filters=["owasp:llm"],
         timeout=43200,
         documentation="https://genai.owasp.org/llm-top-10/",
+        taxonomy="owasp",
     ),
     
     "avid_security": BenchmarkConfig(
@@ -191,6 +199,7 @@ PREDEFINED_BENCHMARKS: Dict[str, BenchmarkConfig] = {
         taxonomy_filters=["avid-effect:security"],
         timeout=43200,
         documentation="https://docs.avidml.org/taxonomy/effect-sep-view/security",
+        taxonomy="avid-effect",
     ),
     
     "avid_ethics": BenchmarkConfig(
@@ -199,6 +208,7 @@ PREDEFINED_BENCHMARKS: Dict[str, BenchmarkConfig] = {
         taxonomy_filters=["avid-effect:ethics"],
         timeout=3600,
         documentation="https://docs.avidml.org/taxonomy/effect-sep-view/ethics",
+        taxonomy="avid-effect",
     ),
     
     "avid_performance": BenchmarkConfig(
@@ -207,6 +217,7 @@ PREDEFINED_BENCHMARKS: Dict[str, BenchmarkConfig] = {
         taxonomy_filters=["avid-effect:performance"],
         timeout=3600,
         documentation="https://docs.avidml.org/taxonomy/effect-sep-view/performance",
+        taxonomy="avid-effect",
     ),
 }
 
