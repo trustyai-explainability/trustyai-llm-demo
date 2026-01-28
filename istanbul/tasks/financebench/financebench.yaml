@@ -27,6 +27,5 @@ filter_list:
       # function to ignore right white spaces or line breaks
       - function: "regex"
         regex_pattern: "^(.*?)\\s*$"
-      - function: take_first
 metadata:
   version: 1.0
