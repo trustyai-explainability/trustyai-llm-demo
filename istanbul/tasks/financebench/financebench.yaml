@@ -2,13 +2,31 @@ task: financebench
 dataset_path: Salesforce/FinEval
 dataset_name: FinanceBench
 test_split: test
-output_type: multiple_choice
+output_type: generate_until
 doc_to_text: query
 doc_to_choice: ["good", "bad"]
 doc_to_target: answer
+generation_kwargs:
+  until:
+    - "</s>"
+    - "\n"
 metric_list:
-  - metric: acc
+  - metric: exact_match
     aggregation: mean
     higher_is_better: true
+    ignore_punctuation: true
+    ignore_case: true
+filter_list:
+  - name: get_response
+    filter:
+      # Filter everything after the first break line
+      - function: "regex"
+        regex_pattern: "^(.*?)(?=\\n|$)"
+      # Remove leading white spaces
+      - function: remove_whitespace
+      # function to ignore right white spaces or line breaks
+      - function: "regex"
+        regex_pattern: "^(.*?)\\s*$"
+      - function: take_first
 metadata:
   version: 1.0
