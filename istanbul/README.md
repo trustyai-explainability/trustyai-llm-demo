@@ -15,8 +15,8 @@ oc apply -f model_storage_container.yaml
 ```
 
 ```shell
-oc apply -f qwen3.yaml
-oc apply -f tokenizer.yaml
+oc apply -f model_qwen3.yaml
+oc apply -f model_embedding.yaml
 ```
 
 ## Deploy Guardrails
@@ -28,15 +28,17 @@ oc apply -f guardrails.yaml
 ## Deploy Llama-stack
 ```shell
 oc apply -f serviceaccount.yaml
-export TOKEN=$(oc create token guardrails-service-account --duration=8760h)
 ```
 
 ```shell
-envsubst < distro.yaml | oc apply -f -
+oc delete -f lls_distro.yaml
+oc delete configmap llama-stack-config
+oc create configmap llama-stack-config --from-file=run.yaml
+oc apply -f lls_distro.yaml
 ```
 
 ```shell
-oc expose service lls-fms-service --name=lls-route
+oc expose service llama-stack-distro-service --name=lls-route
 export LLS_ROUTE=$(oc get route lls-route -o jsonpath='{.spec.host}')
 ```
 

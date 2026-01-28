@@ -74,6 +74,7 @@ spec:
               models=(
                 Qwen/Qwen3-8B
                 sentence-transformers/all-MiniLM-L6-v2
+                microsoft/Phi-4-mini-instruct
               )
               echo "Starting download"
               for model in "${models[@]}"; do

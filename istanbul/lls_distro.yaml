@@ -1,0 +1,37 @@
+apiVersion: llamastack.io/v1alpha1
+kind: LlamaStackDistribution
+metadata:
+  name: llama-stack-distro
+spec:
+  replicas: 1
+  server:
+    containerSpec:
+      env:
+        - name: MILVUS_DB_PATH
+          value: ~/opt/app-root/src/.llama/milvus.db
+        - name: INFERENCE_MODEL
+          value: vllm/phi4
+        - name: EMBEDDING_MODEL
+          value: vllm-embedding/all-MiniLM-L6-v2
+        - name: VLLM_URL
+          value: "https://phi4-predictor:8443/v1"
+        - name: VLLM_EMBEDDING_URL
+          value: "https://minilm-predictor:8443/v1"
+        - name: TRUSTYAI_LMEVAL_TLS
+          value: "true"
+        - name: LLS_ROUTE
+          value: "http://llama-stack-distro-service:8321"
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: guardrails-service-account-token
+              key: token
+      name: llama-stack
+      port: 8321
+    userConfig:
+      configMapName: llama-stack-config
+    distribution:
+      image: quay.io/opendatahub/llama-stack:latest
+      imagePullPolicy: Always
+    storage:
+      size: 20Gi
