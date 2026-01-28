@@ -1,3 +1,4 @@
+task: financebench
 dataset_path: Salesforce/FinEval
 dataset_name: FinanceBench
 test_split: test
