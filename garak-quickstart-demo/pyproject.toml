@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "garak-quickstart-demo"
 version = "0.1.0"
@@ -16,9 +20,15 @@ dependencies = [
     "avidtools==0.1.2",
     "pandas>=2.3.3",
     "numpy>=1.26.4",
+    "transformers>=4.51.3,<4.57.0",
     "garak==0.12.0",
     "rich",
 ]
+
+[tool.setuptools.packages.find]
+include = ["garak_pipeline*"]
+exclude = ["reports*", "examples*", "tests*"]
+
 [dependency-groups]
 dev = [
     "ruff",

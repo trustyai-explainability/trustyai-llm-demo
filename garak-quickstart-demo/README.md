@@ -14,7 +14,7 @@ Run [Garak](https://github.com/NVIDIA/garak) security scans on Kubeflow Pipeline
 1. Install dependencies:
 
 ```bash
-pip install --e .
+pip install -e .
 ```
 
 2. Create a `.env` file:
@@ -22,10 +22,10 @@ pip install --e .
 ```bash
 # Kubeflow Configuration
 KUBEFLOW_PIPELINES_ENDPOINT=https://your-kfp-endpoint
-KUBEFLOW_NAMESPACE=kubeflow-namespace
-KUBEFLOW_BASE_IMAGE=quay.io/trustyai/garak-kfp:latest
+KUBEFLOW_NAMESPACE=your-kubeflow-namespace
+KUBEFLOW_BASE_IMAGE=quay.io/trustyai/garak-kfp-demo:latest
 KUBEFLOW_S3_CREDENTIALS_SECRET_NAME=your-s3-secret-name
-KUBEFLOW_RESULTS_S3_PREFIX=s3://bucket/prefix
+KUBEFLOW_RESULTS_S3_PREFIX=s3://your-bucket/prefix
 
 # AWS/S3 Configuration (for fetching results)
 AWS_ACCESS_KEY_ID=your-access-key
@@ -256,6 +256,7 @@ runner.benchmarks.exists("x")  # True/False
 | `description` | str | None | What this benchmark tests |
 | `probes` | List[str] | None | Garak probes (e.g., `["dan.DAN", "encoding"]`) |
 | `taxonomy_filters` | List[str] | None | Taxonomy filters (e.g., `["owasp:llm01"]`) |
+| `taxonomy` | str | None | Taxonomy for grouping probes while reporting (e.g., `owasp` or `avid-effect`) |
 | `timeout` | int | 3600 | Max execution time (seconds) |
 | `parallel_attempts` | int | 8 | Parallel probe attempts (1-32) |
 | `generations` | int | 1 | Generations per probe (1-10) |

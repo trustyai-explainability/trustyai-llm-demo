@@ -79,6 +79,7 @@ def validate_inputs(
     """Validate inputs before running expensive scan"""
     import subprocess
     import logging
+    from garak_pipeline.errors import GarakValidationError
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
@@ -112,6 +113,10 @@ def validate_inputs(
             validation_errors.append(f"Dangerous flag detected: {flag}")
     
     logger.info(f"validation_errors: {validation_errors}")
+
+    if validation_errors:
+        raise GarakValidationError("\n".join(validation_errors))
+    
     return (
         len(validation_errors) == 0,
         validation_errors
@@ -162,6 +167,9 @@ def garak_scan(
     scan_files = []
     
     for attempt in range(max_retries):
+        s3_client = None
+        process = None
+        
         try:
             process = subprocess.Popen(
                 command,
@@ -174,8 +182,10 @@ def garak_scan(
             
             try:
                 stdout, stderr = process.communicate(timeout=timeout_seconds)
+                logger.info("Garak scan completed")
                 
             except subprocess.TimeoutExpired:
+                logger.error(f"Garak scan timed out after {timeout_seconds}s")
                 # Kill the entire process group
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 try:
@@ -187,6 +197,8 @@ def garak_scan(
                 raise
             
             if process.returncode != 0:
+                logger.error(f"Garak scan failed with exit code {process.returncode}")
+                logger.error(f"Garak output:\n{stdout}")
                 raise subprocess.CalledProcessError(
                     process.returncode, command, stdout, stderr
                 )
@@ -245,12 +257,23 @@ def garak_scan(
             return (0, True, scan_files)
             
         except Exception as e:
+            error_type = type(e).__name__
+            error_msg = str(e)
+            
+            logger.error(f"Attempt {attempt + 1} failed with {error_type}: {error_msg}")
+            
+            # Log additional details for specific error types
+            if isinstance(e, subprocess.CalledProcessError):
+                logger.error(f"Command exit code: {e.returncode}")
+                if e.output:
+                    logger.error(f"Command output: {e.output}")
+            
             if attempt < max_retries - 1:
                 wait_time = min(5 * (2 ** attempt), 60)
                 logger.info(f"Attempt {attempt + 1} failed, retrying in {wait_time}s...")
                 time.sleep(wait_time)
             else:
-                logger.error(f"All {max_retries} attempts failed: {e}")
+                logger.error(f"All {max_retries} attempts failed. Final error: {error_type}: {error_msg}")
                 raise e
         finally:
             if s3_client:
@@ -278,6 +301,7 @@ def parse_results(
     verify_ssl: str,
     s3_bucket: str,
     s3_prefix: str,
+    summary_metrics: dsl.Output[dsl.Metrics],
     html_report: dsl.Output[dsl.HTML]
 ):
     """Parse Garak scan results and upload results to S3"""
@@ -355,6 +379,22 @@ def parse_results(
         aggregated_by_probe,
         eval_threshold
     )
+
+    aggregated_scores = {k: v["aggregated_results"] for k, v in scan_result["scores"].items()}
+
+    combined_metrics = {
+        "total_attempts": 0,
+        "vulnerable_responses": 0,
+        "attack_success_rate": 0,
+    }
+    
+    for aggregated_results in aggregated_scores.values():
+        combined_metrics["total_attempts"] += aggregated_results["total_attempts"]
+        combined_metrics["vulnerable_responses"] += aggregated_results["vulnerable_responses"]
+    
+    combined_metrics["attack_success_rate"] = round((combined_metrics["vulnerable_responses"] / combined_metrics["total_attempts"] * 100), 2) if combined_metrics["total_attempts"] > 0 else 0
+    for key, value in combined_metrics.items():
+        summary_metrics.log_metric(key, value)
     
     # Save file to tmp directory and upload results to S3
     logger.info("Saving scan result...")

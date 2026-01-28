@@ -108,15 +108,19 @@ def parse_aggregated_from_avid_content(avid_content: str) -> Dict[str, Dict[str,
             results = metrics_list[0].get("results", {})
             
             # Parse DataFrame columns to get summary statistics
-            total_attempts = 0
-            benign_responses = 0
+            detector_keys = list(results.get("detector", {}).keys())
+            if not detector_keys:
+                continue
             
-            for idx_str in results.get("detector", {}).keys():
-                passed = results["passed"][idx_str]
-                total = results["total"][idx_str]
-                
-                total_attempts += total
-                benign_responses += passed
+            # Use first detector's total (all detectors have same total_attempts)
+            first_idx = detector_keys[0]
+            total_attempts = results["total"][first_idx]
+            
+            # For benign count, use minimum passed across all detectors
+            # (conservative: an attempt is only benign if ALL detectors passed it)
+            benign_responses = min(
+                results["passed"][idx] for idx in detector_keys
+            )
             
             vulnerable_responses = total_attempts - benign_responses
             attack_success_rate = round((vulnerable_responses / total_attempts * 100), 2) if total_attempts > 0 else 0
