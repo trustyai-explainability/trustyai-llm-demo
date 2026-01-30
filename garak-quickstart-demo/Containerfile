@@ -4,6 +4,8 @@ WORKDIR /opt/app-root
 COPY . .
 
 RUN pip install uv
+# install cpu torch to reduce image size
+RUN pip install --extra-index-url https://download.pytorch.org/whl/cpu torch
 RUN uv pip install --no-cache-dir -e .
 
 # Set XDG environment variables to use /tmp (always writable) for garak to write to
