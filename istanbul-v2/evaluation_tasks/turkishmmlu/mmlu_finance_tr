@@ -1,0 +1,9 @@
+group: mmlu_finance_tr
+group_alias: finance
+task:
+  - mmlu_finance_tasks_tr
+aggregate_metric_list:
+  - metric: acc
+    weight_by_size: True
+metadata:
+  version: 2

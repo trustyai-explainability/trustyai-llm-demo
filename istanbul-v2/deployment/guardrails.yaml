@@ -1,0 +1,34 @@
+---
+# First, create a ConfigMap with your NeMo Guardrails configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nemo-config
+data:
+  config.yaml: |
+    rails:
+      config:
+        huggingface_detector:
+          models:
+            - model_repo: "protectai/deberta-v3-base-prompt-injection-v2"
+              blocked_classes: ["INJECTION"]
+              descriptor: "prompt injection"
+      input:
+        flows:
+          - huggingface detector check input $hf_model="protectai/deberta-v3-base-prompt-injection-v2"
+  rails.co: | 
+
+---
+# Then create the NemoGuardrails resource
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: NemoGuardrails
+metadata:
+  name: nemoguardrails
+  annotations:
+    security.opendatahub.io/enable-auth: "true"
+spec:
+  nemoConfigs:
+    - name: main-config
+      configMaps:
+        - nemo-config
+      default: true

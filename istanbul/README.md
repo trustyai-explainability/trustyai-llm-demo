@@ -37,6 +37,8 @@ oc create configmap llama-stack-config --from-file=run.yaml
 oc apply -f lls_distro.yaml
 ```
 
+ls  /opt/app-root/src/my_tasks
+
 ```shell
 oc expose service llama-stack-distro-service --name=lls-route
 export LLS_ROUTE=$(oc get route lls-route -o jsonpath='{.spec.host}')
