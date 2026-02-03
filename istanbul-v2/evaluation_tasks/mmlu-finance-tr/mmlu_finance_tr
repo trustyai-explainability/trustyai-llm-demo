@@ -1,4 +1,4 @@
-group: mmlu-tr-finance
+group: mmlu-finance-tr
 group_alias: finance
 task:
   - mmlu_finance_tasks_tr
