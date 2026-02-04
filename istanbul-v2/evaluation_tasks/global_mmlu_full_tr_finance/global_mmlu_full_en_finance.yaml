@@ -1,4 +1,4 @@
-group: global_mmlu_finance_en
+group: global_mmlu_finance_english
 task:
   - global_mmlu_full_en_high_school_microeconomics
   - global_mmlu_full_en_high_school_macroeconomics
