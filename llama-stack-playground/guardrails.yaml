@@ -3,6 +3,14 @@ kind: ServiceAccount
 metadata:
   name: guardrails-service-account
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: guardrails-service-account-token
+  annotations:
+    kubernetes.io/service-account.name: guardrails-service-account
+type: kubernetes.io/service-account-token
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
