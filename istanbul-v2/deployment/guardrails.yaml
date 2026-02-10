@@ -24,8 +24,6 @@ apiVersion: trustyai.opendatahub.io/v1alpha1
 kind: NemoGuardrails
 metadata:
   name: nemoguardrails
-  annotations:
-    security.opendatahub.io/enable-auth: "true"
 spec:
   nemoConfigs:
     - name: main-config

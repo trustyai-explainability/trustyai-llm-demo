@@ -61,8 +61,8 @@ spec:
               
               datasets = [
                 ["Linq-AI-Research", "FinDER", "data/train-00000-of-00001.parquet"],
-                ["Salesforce", "FinEval", "CRA-Bigdata/test-00000-of-00001.parquet"],
-              
+                ["CohereLabs", "Global-MMLU", "tr/test-00000-of-00001.parquet"],
+                ["CohereLabs", "Global-MMLU", "tr/dev-00000-of-00001.parquet"],
               ]
               
               for repo, dataset_name, dataset in datasets:
@@ -73,9 +73,8 @@ spec:
               PYEOF
 
               models=(
-                sentence-transformers/all-MiniLM-L6-v2
-                microsoft/Phi-4-mini-instruct
-                RedHatAI/Qwen3-8B-FP8-dynamic
+                Qwen/Qwen3-Embedding-0.6B
+                Qwen/Qwen3-8B
               )
               echo "Starting download"
               for model in "${models[@]}"; do

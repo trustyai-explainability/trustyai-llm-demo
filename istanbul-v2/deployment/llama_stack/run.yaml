@@ -12,6 +12,9 @@
     - tool_runtime
     - files
     - datasetio
+    tool_groups:
+      - toolgroup_id: builtin::rag
+        provider_id: rag-runtime
     providers:
       eval:
         - provider_id: trustyai_ragas_inline
@@ -82,65 +85,36 @@
             namespace: datasetio::localfs
             backend: kv_default
       safety:
-        - provider_id: trustyai_fms
-          module: llama_stack_provider_trustyai_fms==0.3.2
-          provider_type: remote::trustyai_fms
+        - provider_id: nvidia
+          provider_type: remote::nvidia
           config:
-            shields:
-              trustyai_input:
-                type: content
-                detector_url: "https://custom-guardrails-service:8480"
-                detector_params:
-                  custom:
-                    input_guardrail:
-                      input_policies: [jailbreak, content-moderation, pii, policy]
-                      guardrail_model: ${env.INFERENCE_MODEL}
-                      guardrail_model_token: "${env.TOKEN}"
-                      guardrail_model_url: "http://lls-route-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com/v1/chat/completions"
-                message_types: ["user"]
-                verify_ssl: false
-                auth_token: "${env.TOKEN}"
-              trustyai_input_no_policy:
-                type: content
-                detector_url: "https://custom-guardrails-service:8480"
-                detector_params:
-                  custom:
-                    input_guardrail:
-                      input_policies: [jailbreak, content-moderation, pii]
-                      guardrail_model: ${env.INFERENCE_MODEL}
-                      guardrail_model_token: "${env.TOKEN}"
-                      guardrail_model_url: "http://lls-route-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com/v1/chat/completions"
-                message_types: ["user"]
-                verify_ssl: false
-                auth_token: "${env.TOKEN}"
-              trustyai_output:
-                type: content
-                detector_url: "https://custom-guardrails-service:8480"
-                detector_params:
-                  custom:
-                    output_guardrail:
-                      output_policies: [jailbreak, content-moderation, pii, policy]
-                      guardrail_model: ${env.INFERENCE_MODEL}
-                      guardrail_model_token: "${env.TOKEN}"
-                      guardrail_model_url: "http://lls-route-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com/v1/chat/completions"
-                message_types: ["user", "completion"]
-                verify_ssl: false
-                auth_token: "${env.TOKEN}"
+            guardrails_service_url: https://nemoguardrails:8000/
+            config_id: main-config
+      vector_io:
+        - provider_id: milvus
+          provider_type: inline::milvus
+          config:
+            db_path: /opt/app-root/src/.llama/distributions/rh/milvus.db
+            persistence:
+              backend: kv_default
+              namespace: vector_io::milvus
     registered_resources:
       models:
       - metadata:
-          embedding_dimension: 384
-        model_id: all-MiniLM-L6-v2
+          embedding_dimension: 1024
+        model_id: ${env.EMBEDDING_MODEL}
         provider_id: vllm-embedding
-        provider_model_id: all-minilm:latest
+        provider_model_id: embedding
         model_type: embedding
       shields:
-        - shield_id: trustyai_input
-          provider_id: trustyai_fms
-        - shield_id: trustyai_input_no_policy
-          provider_id: trustyai_fms
-        - shield_id: trustyai_output
-          provider_id: trustyai_fms
+        - shield_id: nemo-guardrails-prompt-injection
+          provider_id: nvidia
+          provider_resource_id: nemo-model
+      vector_stores:
+        - vector_store_id: milvus
+          provider_id: milvus
+          embedding_model: ${env.EMBEDDING_MODEL}
+          embedding_dimension: 1024
       benchmarks:
         - benchmark_id: trustyai_garak::standard
           dataset_id: garak
@@ -148,9 +122,61 @@
             - garak_scoring
           provider_id: trustyai_garak
           provider_benchmark_id: standard
-        - benchmark_id: "trustyai_lmeval::financebench"
-          dataset_id: "trustyai_lmeval::financebench"
-          scoring_functions: ["string"]
+#        - benchmark_id: "trustyai_lmeval::financebench"
+#          dataset_id: "trustyai_lmeval::financebench"
+#          scoring_functions: [ "string" ]
+#          provider_benchmark_id: string
+#          provider_id: trustyai_lmeval
+#          metadata:
+#            custom_task:
+#              git:
+#                url: "https://github.com/trustyai-explainability/trustyai-llm-demo.git"
+#                branch: "Istanbul"
+#                path: "istanbul-v2/evaluation_tasks/"
+#            input:
+#              storage:
+#                s3:
+#                  accessKeyId:
+#                    name: aws-connection-data-connection
+#                    key: AWS_ACCESS_KEY_ID
+#                  secretAccessKey:
+#                    name: aws-connection-data-connection
+#                    key: AWS_SECRET_ACCESS_KEY
+#                  bucket:
+#                    name: aws-connection-data-connection
+#                    key: AWS_S3_BUCKET
+#                  endpoint:
+#                    name: aws-connection-data-connection
+#                    key: AWS_S3_ENDPOINT
+#                  region:
+#                    name: aws-connection-data-connection
+#                    key: AWS_DEFAULT_REGION
+#                  path: ""
+#                  verifySSL: false
+#            offline:
+#              storage:
+#                s3:
+#                  accessKeyId:
+#                    name: aws-connection-data-connection
+#                    key: AWS_ACCESS_KEY_ID
+#                  secretAccessKey:
+#                    name: aws-connection-data-connection
+#                    key: AWS_SECRET_ACCESS_KEY
+#                  bucket:
+#                    name: aws-connection-data-connection
+#                    key: AWS_S3_BUCKET
+#                  endpoint:
+#                    name: aws-connection-data-connection
+#                    key: AWS_S3_ENDPOINT
+#                  region:
+#                    name: aws-connection-data-connection
+#                    key: AWS_DEFAULT_REGION
+#                  path: ""
+#                  verifySSL: false
+#            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
+        - benchmark_id: "trustyai_lmeval::global_mmlu_finance_english"
+          dataset_id: "trustyai_lmeval::global_mmlu_finance_english"
+          scoring_functions: [ "string" ]
           provider_benchmark_id: string
           provider_id: trustyai_lmeval
           metadata:
@@ -158,48 +184,100 @@
               git:
                 url: "https://github.com/trustyai-explainability/trustyai-llm-demo.git"
                 branch: "Istanbul"
-                path: "istanbul/tasks/"
+                path: "istanbul-v2/evaluation_tasks/"
             input:
               storage:
                 s3:
                   accessKeyId:
-                      name: aws-connection-data-connection
-                      key: AWS_ACCESS_KEY_ID
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
                   secretAccessKey:
-                      name: aws-connection-data-connection
-                      key: AWS_SECRET_ACCESS_KEY
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
                   bucket:
-                      name: aws-connection-data-connection
-                      key: AWS_S3_BUCKET
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
                   endpoint:
-                      name: aws-connection-data-connection
-                      key: AWS_S3_ENDPOINT
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
                   region:
-                      name: aws-connection-data-connection
-                      key: AWS_DEFAULT_REGION
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
                   path: ""
                   verifySSL: false
             offline:
               storage:
                 s3:
                   accessKeyId:
-                      name: aws-connection-data-connection
-                      key: AWS_ACCESS_KEY_ID
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
                   secretAccessKey:
-                      name: aws-connection-data-connection
-                      key: AWS_SECRET_ACCESS_KEY
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
                   bucket:
-                      name: aws-connection-data-connection
-                      key: AWS_S3_BUCKET
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
                   endpoint:
-                      name: aws-connection-data-connection
-                      key: AWS_S3_ENDPOINT
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
                   region:
-                      name: aws-connection-data-connection
-                      key: AWS_DEFAULT_REGION
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
                   path: ""
                   verifySSL: false
-            tokenizer: microsoft/Phi-4-mini-instruct
+            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
+        - benchmark_id: "trustyai_lmeval::global_mmlu_finance_turkish"
+          dataset_id: "trustyai_lmeval::global_mmlu_finance_turkish"
+          scoring_functions: [ "string" ]
+          provider_benchmark_id: string
+          provider_id: trustyai_lmeval
+          metadata:
+            custom_task:
+              git:
+                url: "https://github.com/trustyai-explainability/trustyai-llm-demo.git"
+                branch: "Istanbul"
+                path: "istanbul-v2/evaluation_tasks/"
+            input:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            offline:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
         - benchmark_id: "trustyai_lmeval::arc_easy"
           dataset_id: "trustyai_lmeval::arc_easy"
           scoring_functions: ["string"]
@@ -207,7 +285,7 @@
           provider_id: trustyai_lmeval
           metadata:
             tokenized_requests: False
-            tokenizer: microsoft/Phi-4-mini-instruct
+            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
     server:
       port: 8321
     storage:

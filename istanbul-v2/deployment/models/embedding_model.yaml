@@ -1,7 +1,7 @@
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
-  name: vllm-runtime
+  name: vllm-runtime-embedding
   annotations:
     openshift.io/display-name: vLLM ServingRuntime for KServe
     opendatahub.io/template-display-name: vLLM ServingRuntime for KServe
@@ -23,6 +23,7 @@ spec:
         - '--dtype=float16'
         - '--enforce-eager'
         - '--tensor-parallel-size=1'
+        - '--task=embed'
       command:
         - python
         - '-m'
@@ -53,11 +54,11 @@ spec:
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: minilm
+  name: embedding
   labels:
     opendatahub.io/dashboard: 'true'
   annotations:
-    openshift.io/display-name: minilm
+    openshift.io/display-name:  embedding
     serving.knative.openshift.io/enablePassthrough: 'true'
     security.opendatahub.io/enable-auth: 'true'
     serving.kserve.io/deploymentMode: RawDeployment
@@ -80,10 +81,10 @@ spec:
           cpu: '1'
           memory: 8Gi
           nvidia.com/gpu: '1'
-      runtime: vllm-runtime
+      runtime: vllm-runtime-embedding
       storage:
         key: aws-connection-data-connection
-        path: all-MiniLM-L6-v2
+        path: Qwen3-Embedding-0.6B
     tolerations:
       - effect: NoSchedule
         key: nvidia.com/gpu

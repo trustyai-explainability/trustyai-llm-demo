@@ -1,0 +1,103 @@
+/*-- scss:defaults --*/
+
+// Red Hat Colors
+$red-hat-red: #EE0000;
+$red-hat-dark-red: #A30000;
+$red-hat-black: #000000;
+
+// Fonts
+@import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&display=swap');
+
+// Theme colors
+$body-bg: #ffffff;
+$body-color: #000000;
+$link-color: $red-hat-red;
+$link-color-hover: $red-hat-dark-red;
+
+// Headings
+$presentation-heading-font: 'Red Hat Display', sans-serif;
+$presentation-heading-color: $red-hat-red;
+$presentation-h1-font-size: 2.5em;
+$presentation-h2-font-size: 2em;
+$presentation-h3-font-size: 1.5em;
+
+// Font sizes
+$presentation-font-size-root: 40px;
+$presentation-line-height: 1.6;
+
+// Other
+$code-block-bg: #f5f5f5;
+$code-block-border-color: #cccccc;
+
+/*-- scss:rules --*/
+
+.reveal {
+  font-family: 'Red Hat Display', sans-serif;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+  font-family: 'Red Hat Display', sans-serif;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.reveal h1 {
+  color: $red-hat-red;
+  border-bottom: 3px solid $red-hat-red;
+  padding-bottom: 0.3em;
+}
+
+.reveal h2 {
+  color: $red-hat-red;
+  margin-top: 1em;
+}
+
+.reveal h3 {
+  color: $red-hat-dark-red;
+}
+
+.reveal strong {
+  color: $red-hat-red;
+  font-weight: 700;
+}
+
+.reveal a {
+  color: $red-hat-red;
+  text-decoration: none;
+}
+
+.reveal a:hover {
+  color: $red-hat-red;
+  text-decoration: underline;
+}
+
+// Code blocks
+.reveal pre {
+  background-color: $code-block-bg;
+  border: 1px solid $code-block-border-color;
+  border-radius: 4px;
+  padding: 1em;
+}
+
+// Lists
+.reveal ul,
+.reveal ol {
+  margin-left: 1em;
+}
+
+.reveal li {
+  margin-bottom: 0.5em;
+}
+
+// Slide numbers
+.reveal .slide-number {
+  color: $red-hat-red;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 5px 10px;
+  border-radius: 3px;
+}

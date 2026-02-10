@@ -11,12 +11,14 @@ spec:
           value: ~/opt/app-root/src/.llama/milvus.db
         - name: INFERENCE_MODEL
           value: vllm/qwen3
+        - name: INFERENCE_MODEL_SOURCE
+          value: Qwen/Qwen3-8B
         - name: EMBEDDING_MODEL
-          value: vllm-embedding/all-MiniLM-L6-v2
+          value: vllm-embedding/embedding
         - name: VLLM_URL
           value: "https://qwen3-predictor:8443/v1"
         - name: VLLM_EMBEDDING_URL
-          value: "https://minilm-predictor:8443/v1"
+          value: "https://embedding-predictor:8443/v1"
         - name: TRUSTYAI_LMEVAL_TLS
           value: "true"
         - name: LLS_ROUTE
