@@ -10,5 +10,30 @@ metric_list:
   - metric: acc
     aggregation: mean
     higher_is_better: true
+  - metric: !function custom_metrics.precision_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: !function custom_metrics.recall_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: !function custom_metrics.f1_score
+    aggregation: mean
+    higher_is_better: true
+  - metric: !function custom_metrics.true_positives
+    aggregation: sum
+    higher_is_better: true
+  - metric: !function custom_metrics.true_negatives
+    aggregation: sum
+    higher_is_better: true
+  - metric: !function custom_metrics.false_positives
+    aggregation: sum
+    higher_is_better: false
+  - metric: !function custom_metrics.false_negatives
+    aggregation: sum
+    higher_is_better: false
+  - metric: !function custom_metrics.specificity_score
+    aggregation: mean
+    higher_is_better: true
 metadata:
-  version: 1.0
+  version: 2.0
+  description: "FinanceBench binary classification with full confusion matrix metrics"
