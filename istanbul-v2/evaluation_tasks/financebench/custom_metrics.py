@@ -61,33 +61,6 @@ def false_negatives(items):
     result = confusion_matrix_metrics(items)
     return result['fn']
 
-
-def precision_score(items):
-    """Compute precision: TP / (TP + FP)"""
-    result = confusion_matrix_metrics(items)
-    tp = result['tp']
-    fp = result['fp']
-    return tp / (tp + fp) if (tp + fp) > 0 else 0.0
-
-
-def recall_score(items):
-    """Compute recall: TP / (TP + FN)"""
-    result = confusion_matrix_metrics(items)
-    tp = result['tp']
-    fn = result['fn']
-    return tp / (tp + fn) if (tp + fn) > 0 else 0.0
-
-
-def f1_score(items):
-    """Compute F1 score: 2 * (precision * recall) / (precision + recall)"""
-    prec = precision_score(items)
-    rec = recall_score(items)
-    return 2 * (prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
-
-
-def specificity_score(items):
-    """Compute specificity (true negative rate): TN / (TN + FP)"""
-    result = confusion_matrix_metrics(items)
-    tn = result['tn']
-    fp = result['fp']
-    return tn / (tn + fp) if (tn + fp) > 0 else 0.0
+def count(x):
+    """For whatever reason, lm-eval-harness does not provide a sum aggregation, so define one here"""
+    return sum(x)
