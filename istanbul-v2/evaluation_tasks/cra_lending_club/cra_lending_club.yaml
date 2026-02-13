@@ -1,4 +1,4 @@
-task: financebench
+task: cra_lending_club
 dataset_path: Salesforce/FinEval
 dataset_name: CRA-LendingClub
 test_split: test

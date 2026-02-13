@@ -124,8 +124,8 @@
             - garak_scoring
           provider_id: trustyai_garak
           provider_benchmark_id: standard
-        - benchmark_id: "trustyai_lmeval::financebench"
-          dataset_id: "trustyai_lmeval::financebench"
+        - benchmark_id: "trustyai_lmeval::cra_lending_club"
+          dataset_id: "trustyai_lmeval::cra_lending_club"
           scoring_functions: [ "string" ]
           provider_benchmark_id: string
           provider_id: trustyai_lmeval
