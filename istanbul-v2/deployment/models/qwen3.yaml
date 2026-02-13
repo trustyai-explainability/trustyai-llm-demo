@@ -21,12 +21,11 @@ spec:
         - '--model=/mnt/models'
         - '--served-model-name={{.Name}}'
         - '--dtype=float16'
-        - '--enforce-eager'
         - '--max-model-len=16384'
         - '--tensor-parallel-size=2'
         - '--gpu-memory-utilization=0.75'
-        - '--max-num-seqs=16'
-        - '--max-num-batched-tokens=8192'
+        - '--max-num-seqs=32'
+        - '--max-num-batched-tokens=32768'
         - '--swap-space=4'
       command:
         - python

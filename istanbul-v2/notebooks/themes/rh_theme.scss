@@ -72,9 +72,15 @@ $code-block-border-color: #cccccc;
 }
 
 
-.reveal strong {
+.reveal strong,
+.reveal b {
   color: $red-hat-red;
   font-weight: 700;
+}
+
+.reveal em {
+  color: $red-hat-red;
+  font-style: italic;
 }
 
 .reveal a {
@@ -93,19 +99,31 @@ $code-block-border-color: #cccccc;
   border: 1px solid $code-block-border-color;
   border-radius: 4px;
   font-size: .7em;
-  max-height: none !important;  // Remove limit completely
+  max-height: 50%;
+  top: 0px;
+  overflow: auto;
   padding: 1em;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .reveal pre code {
   max-height: none !important;
+  white-space: pre;
+}
+
+// Fix code jump on line highlighting
+// Remove top/left from reveal.js's code fragments to prevent jump
+.reveal pre > code:not(:first-child).fragment {
+  padding: 34px 9px;
 }
 
 // Target Quarto-specific code containers
 .reveal .cell-output pre,
 .reveal .cell-code pre,
 .reveal div.sourceCode {
-  max-height: none !important;
+  max-width: 100%;
+  overflow: auto;
 }
 
 .reveal .cell-output pre code,
@@ -129,4 +147,79 @@ $code-block-border-color: #cccccc;
   background-color: rgba(255, 255, 255, 0.9);
   padding: 5px 10px;
   border-radius: 3px;
+}
+
+// Alternative: custom class for slides that should start higher
+.reveal section.top-align {
+  justify-content: flex-start;
+  padding-top: 2em;
+}
+
+// Fix output cell widths to match code cells
+.reveal .cell-output pre {
+  max-width: 100%;
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.reveal .cell-output-display {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+// Constrain images to slide width
+.reveal .cell-output-display img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+// Scale tables appropriately
+.reveal .cell-output-display table {
+  max-width: 100%;
+  font-size: 0.7em;
+}
+
+// Custom cell height classes - for both notebook cells and markdown code blocks
+// For markdown code blocks, the class goes on the <pre> element itself
+.reveal pre.tall-code {
+  max-height: 800px !important;
+}
+
+.reveal pre.medium-code {
+  max-height: 600px !important;
+}
+
+.reveal pre.short-code {
+  max-height: 300px !important;
+}
+
+.reveal pre.shortish-code {
+  max-height: 400px !important;
+}
+
+.reveal pre.full-height-code {
+  max-height: 900px !important;
+}
+
+// For notebook cells, the class goes on the parent <div class="cell">
+.reveal .cell.tall-code pre {
+  max-height: 800px !important;
+}
+
+.reveal .cell.medium-code pre {
+  max-height: 600px !important;
+}
+
+.reveal .cell.short-code pre {
+  max-height: 300px !important;
+}
+
+.reveal .cell.shortish-code pre {
+  max-height: 400px !important;
+}
+
+
+.reveal .cell.full-height-code pre {
+  max-height: 900px !important;
 }

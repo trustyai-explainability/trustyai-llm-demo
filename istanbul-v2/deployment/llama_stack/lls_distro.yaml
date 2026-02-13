@@ -39,7 +39,7 @@ spec:
     userConfig:
       configMapName: llama-stack-config
     distribution:
-      image: quay.io/opendatahub/llama-stack:latest
+      image: quay.io/opendatahub/llama-stack:28af8f71dbb8ed867f6d4213a17f18000c89c65f
       imagePullPolicy: Always
     storage:
       size: 20Gi

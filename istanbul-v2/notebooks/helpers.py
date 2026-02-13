@@ -1,17 +1,43 @@
-import time
 import io
-import pandas as pd
-import matplotlib.pyplot as plt
-from IPython.display import display, HTML
 import json
-import datetime
+import time
+import uuid
 
-def monitor_job_status(client, evaluation):
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from datetime import datetime
+from IPython.display import display, HTML
+import pickle as pkl
+
+
+def save_or_load(scope, var_name, force_cache_load=False):
+    import os
+    local_var = scope.get(var_name)
+    cache_path = os.path.join("cached_results", f"{var_name}.pkl")
+    if local_var is None or force_cache_load:
+        print(f"🔄 Loading {var_name} from cache")
+
+        if os.path.exists(cache_path):
+            with open(cache_path, "rb") as f:
+                return pkl.load(f)
+        else:
+            raise FileNotFoundError(cache_path)
+    else:
+        print(f"💾 Caching {var_name} to {cache_path}")
+        with open(cache_path, "wb") as f:
+            pkl.dump(local_var, f)
+        return local_var
+
+
+
+def monitor_job_status(client, evaluation_dict=None, benchmark_id=None, job=None):
     loop_idx = 0
     start_t = time.time()
 
-    benchmark_id = evaluation["benchmark_id"]
-    job = evaluation["job"]
+    if evaluation_dict:
+        benchmark_id = evaluation_dict["benchmark_id"]
+        job = evaluation_dict["job"]
 
     while True:
         if loop_idx % 20 == 0:
@@ -20,8 +46,9 @@ def monitor_job_status(client, evaluation):
             print(f"\r❌ {benchmark_id} job {job.job_id} failed"+" "*50)
             break
         elif job.status == 'completed':
-            if "metadata" in job:
-                delta_t = datetime.datetime.fromisoformat(job.metadata["finished_at"]) - datetime.datetime.fromisoformat(
+            results = client.alpha.eval.jobs.retrieve(job_id=job.job_id, benchmark_id=benchmark_id)
+            if getattr(job, "metadata"):
+                delta_t = datetime.fromisoformat(job.metadata["finished_at"]) - datetime.fromisoformat(
                     job.metadata["created_at"])
                 delta_t_string = " ".join([item+"hms"[i] for i, item in enumerate(f"{delta_t!s}".split(":")) if int(item)!=0])
                 print(f"\n✅ {benchmark_id} job {job.job_id} finished in {delta_t_string}!"+" "*50)
@@ -30,6 +57,10 @@ def monitor_job_status(client, evaluation):
                 minutes = delta_t // 60
                 seconds = delta_t % 60
                 print(f"\n✅ {benchmark_id} job {job.job_id} finished in {minutes}m {seconds}s!" + " " * 50)
+            if evaluation_dict:
+                 evaluation_dict['results'] = results
+            else:
+                return results
             break
         else:
             emoji = "🕛🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚"[loop_idx %12]
@@ -37,8 +68,49 @@ def monitor_job_status(client, evaluation):
         loop_idx += 1
         time.sleep(.25)
 
+## LM EVAL ================================================
+def  display_eval_results(model_name, evaluation):
+    benchmark_id = evaluation["benchmark_id"]
+    benchmark_name = evaluation["label"]
+    eval_response = evaluation["results"]
 
-def compare_evaluation_runs(client, evaluations: dict, benchmark_name="Benchmark"):
+    """One-stop visualization of evaluation results"""
+    # Parse results
+    scores = eval_response.scores
+    results = []
+
+    for key, scoring_result in scores.items():
+        if ':acc' in key and 'stderr' not in key and 'norm' not in key:
+            subject = key.replace(benchmark_id.split("::")[1], benchmark_name)
+            if subject == benchmark_id.split("::")[1]:
+                subject += ": Overall"
+
+
+
+            acc = scoring_result.aggregated_results.get('acc', 0)
+
+            # Get corresponding stderr
+            stderr_key = key.replace(':acc', ':acc_stderr')
+            stderr = scores.get(stderr_key, {}).aggregated_results.get('acc_stderr', 0) if stderr_key in scores else 0
+
+            results.append({
+                'Subject': subject,
+                'Accuracy': acc,
+                'Std Error': stderr
+            })
+
+    df = pd.DataFrame(results).sort_values('Accuracy', ascending=False)
+
+    # Print summary
+    print(f"\n{'=' * 70}")
+    print(f"  {benchmark_name.upper()} RESULTS")
+    print(f"{'=' * 70}")
+    print(f"  Model: {model_name}")
+    print(f"  Accuracy: {df['Accuracy'].mean() * 100:.2f}%")
+    print(f"{'=' * 70}\n")
+
+
+def compare_mmlu_evaluation_runs(client, evaluations: dict, benchmark_name="Benchmark"):
     """
     Compare multiple evaluation runs side-by-side
 
@@ -101,18 +173,6 @@ def compare_evaluation_runs(client, evaluations: dict, benchmark_name="Benchmark
     # Calculate delta
     comparison_df['Delta'] = comparison_df[f'Accuracy_{second_label}'] - comparison_df[f'Accuracy_{first_label}']
     comparison_df['Delta_pct'] = (comparison_df['Delta'] / comparison_df[f'Accuracy_{first_label}']) * 100
-
-    # Sort by first run's accuracy
-    #comparison_df = comparison_df.sort_values(f'Accuracy_{first_label}', ascending=False)
-
-    # Print summary
-    # print(f"\n{'=' * 80}")
-    # print(f"  {benchmark_name.upper()} COMPARISON: {first_label} vs {second_label}")
-    # print(f"{'=' * 80}")
-    # print(f"  {first_label} Average: {comparison_df[f'Accuracy_{first_label}'].mean() * 100:.2f}%")
-    # print(f"  {second_label} Average: {comparison_df[f'Accuracy_{second_label}'].mean() * 100:.2f}%")
-    # print(f"  Average Delta: {comparison_df['Delta'].mean() * 100:.2f}% ({comparison_df['Delta'].mean() * 100:+.2f} percentage points)")
-    # print(f"{'=' * 80}\n")
 
     # Display comparison table
     display_df = comparison_df.copy()
@@ -197,11 +257,131 @@ def compare_evaluation_runs(client, evaluations: dict, benchmark_name="Benchmark
     plt.savefig(f'{benchmark_name}_comparison.png', dpi=300, bbox_inches='tight')
     plt.close(fig)
 
-    return display_html, fig
+    return fig
 
 
+def visualize_financebench_confusion_matrix(response, benchmark_id, save_path=None):
+    """
+    Visualize FinanceBench evaluation results with confusion matrix
 
-def visualize_garak_results(client, garak_job, benchmark_id="trustyai_garak::standard"):
+    Args:
+        client: Llama Stack client
+        eval_job_dict: Dict with "job", "benchmark_id", "label"
+        save_path: Optional path to save visualization
+
+    Returns:
+        dict: Results summary with confusion matrix data
+    """
+
+    # Extract confusion matrix components from scores
+    tp = response.scores.get('financebench:true_positive', {}).aggregated_results.get('true_positive', 0)
+    tn = response.scores.get('financebench:true_negative', {}).aggregated_results.get('true_negative', 0)
+    fp = response.scores.get('financebench:false_positive', {}).aggregated_results.get('false_positive', 0)
+    fn = response.scores.get('financebench:false_negative', {}).aggregated_results.get('false_negative', 0)
+    accuracy = response.scores.get('financebench:acc', {}).aggregated_results.get('acc', 0)
+
+    total = tp + tn + fp + fn
+
+    # Calculate additional metrics
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+
+    # Print summary
+    # print(f"\n{'=' * 80}")
+    # print(f"  FINANCEBENCH EVALUATION RESULTS")
+    # print(f"{'=' * 80}")
+    # print(f"  Total Samples: {total}")
+    # print(f"  Accuracy:      {accuracy*100:.2f}%")
+    # print(f"  Precision:     {precision*100:.2f}%")
+    # print(f"  Recall:        {recall*100:.2f}%")
+    # print(f"  ")
+    # print(f"  Confusion Matrix:")
+    # print(f"    True Positives:  {int(tp)}")
+    # print(f"    True Negatives:  {int(tn)}")
+    # print(f"    False Positives: {int(fp)}")
+    # print(f"    False Negatives: {int(fn)}")
+    # print(f"{'=' * 80}\n")
+
+    # Create visualization
+    label_size = 14
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 9), dpi=250)
+
+    # 1. Confusion Matrix
+    confusion_matrix = [[tn, fp], [fn, tp]]
+    max_val = max(tp, tn, fp, fn) if total > 0 else 1
+
+    im = ax1.imshow(confusion_matrix, cmap='viridis', alpha=0.7, vmin=0, vmax=max_val)
+
+    # Turn off default grid
+    ax1.grid(False)
+
+    # Add grid lines between cells - draw on top of image
+    ax1.axhline(y=0.5, color='black', linestyle='-', linewidth=2, zorder=3)
+    ax1.axvline(x=0.5, color='black', linestyle='-', linewidth=2, zorder=3)
+
+    # Add text annotations
+    for i in range(2):
+        for j in range(2):
+            value = confusion_matrix[i][j]
+            percentage = (value / total * 100) if total > 0 else 0
+            ax1.text(j, i, f'{int(value)}\n({percentage:.1f}%)',
+                    ha="center", va="center", color="black",
+                    fontsize=16, zorder=4)
+
+    ax1.set_xticks([0, 1])
+    ax1.set_yticks([0, 1])
+    ax1.set_xticklabels(['Bad', 'Good'], fontsize=label_size)
+    ax1.set_yticklabels(['Bad', 'Good'], fontsize=label_size)
+    ax1.set_xlabel('Predicted Loan Judgement', fontsize=label_size+2)
+    ax1.set_ylabel('Ground Truth Loan Judgement', fontsize=label_size+2)
+    ax1.set_title('Confusion Matrix', fontsize=label_size+4, fontweight='bold')
+
+    # 2. Distribution Pie Chart
+    correct = tp + tn
+    incorrect = fp + fn
+
+    if correct > 0 or incorrect > 0:
+        ax2.pie([correct, incorrect],
+                labels=[f'Correct\n({int(correct)})', f'Incorrect\n({int(incorrect)})'],
+                colors=['#51cf66', '#ee0000'],
+                autopct='%1.1f%%',
+                textprops={'fontsize': label_size},
+                startangle=90,
+                explode=(0.05, 0.05),
+                shadow=False)
+
+    ax2.set_title('Overall Results Distribution', fontsize=label_size+4, fontweight='bold')
+
+    # Overall title
+    plt.suptitle('FinanceBench Results - Qwen3-30b',
+                 fontsize=18, fontweight='bold')
+
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.2)
+
+    # Save figure
+    if save_path is None:
+        save_path = 'financebench_confusion_matrix.png'
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+## GARAK ===================
+bcolor_dict = {
+    "PURPLE":   '\033[95m',
+    "BLUE":     '\033[94m',
+    "CYAN":     '\033[96m',
+    "GREEN":    '\033[92m',
+    "YELLOW":   '\033[93m',
+    "RED":      '\033[91m',
+    "ENDC":     '\033[0m',
+    "BOLD":     '\033[1m',
+    "UNDERLINE":'\033[4m'
+}
+def bcolor(key, string):
+    return bcolor_dict[key.upper()] + string + bcolor_dict['ENDC']
+
+def visualize_garak_results(garak_report):
     """
     Visualize NVIDIA Garak security evaluation results
 
@@ -214,61 +394,26 @@ def visualize_garak_results(client, garak_job, benchmark_id="trustyai_garak::sta
         dict: Dictionary containing parsed results and dataframes
     """
 
-    # Get job status to retrieve file IDs
-    job_status = client.alpha.eval.jobs.status(
-        job_id=garak_job.job_id,
-        benchmark_id=benchmark_id
-    )
-
-    if job_status.status != 'completed':
-        print(f"⚠️  Job status: {job_status.status}")
-        return None
-
-    # Find the report.jsonl file
-    report_file_id = None
-    result_file_id = None
-
-    for key, value in job_status.metadata.items():
-        if 'scan.report.jsonl' in key:
-            report_file_id = value
-        elif 'scan_result.json' in key:
-            result_file_id = value
-
-    if not report_file_id:
-        print("❌ Could not find report file in job metadata")
-        return None
-
-    # Download and parse the report file
-    print(f"📥 Downloading garak results...")
-
-    try:
-        # Use the correct client.files.content() method
-        content = client.files.content(report_file_id)
-
-        # Parse JSONL (each line is a JSON object)
-        report_lines = [json.loads(line) for line in content.strip().split('\n') if line.strip()]
-
-    except Exception as e:
-        print(f"❌ Error downloading report: {e}")
-        return None
-
     # Parse the report data
     results = []
 
-    for entry in report_lines:
+    if isinstance(garak_report, list):
+        rows = garak_report
+    else:
+        rows = garak_report.generations
+
+    for entry in rows:
         # Each entry contains probe information
-        probe_name = entry.get('probe', 'Unknown')
-        detector_name = entry.get('detector', 'Unknown')
-        passed = entry.get('passed', 0)
-        total = entry.get('total', 0)
-        failed = total - passed
+        probe_name = entry['probe']
+        failed = int(entry['vulnerable'])
+        total = 1
+        passed = total - failed
 
         # Extract category from probe name (e.g., "encoding.InjectAscii85" -> "encoding")
         category = probe_name.split('.')[0] if '.' in probe_name else 'Other'
 
         results.append({
             'Probe': probe_name,
-            'Detector': detector_name,
             'Category': category,
             'Passed': passed,
             'Failed': failed,
@@ -284,17 +429,20 @@ def visualize_garak_results(client, garak_job, benchmark_id="trustyai_garak::sta
 
     # Print summary
     total_tests = df['Total'].sum()
+    total_passes = df['Passed'].sum()
     total_failures = df['Failed'].sum()
     overall_failure_rate = (total_failures / total_tests * 100) if total_tests > 0 else 0
+    overall_success_rate = (total_passes / total_tests * 100) if total_tests > 0 else 0
 
     print(f"\n{'=' * 80}")
     print(f"  GARAK SECURITY EVALUATION RESULTS")
     print(f"{'=' * 80}")
-    print(f"  Total Tests: {total_tests:,}")
-    print(f"  Total Failures: {total_failures:,} ({overall_failure_rate:.2f}%)")
-    print(f"  Total Passed: {df['Passed'].sum():,}")
-    print(f"  Unique Probes: {df['Probe'].nunique()}")
-    print(f"  Categories Tested: {df['Category'].nunique()}")
+    print(f"  Total Attacks:             {total_tests:,}")
+    print("  Total Attack Penetrations: "+bcolor("RED", f"{total_failures:,} ({overall_failure_rate:.2f}%)"))
+    print(f"  Total Attacks Defended:    "+bcolor("GREEN", f"{total_passes:,} ({overall_success_rate:.2f}%)"))
+
+    print(f"  Unique Probes:             {df['Probe'].nunique()}")
+    print(f"  Categories Tested:         {df['Category'].nunique()}")
     print(f"{'=' * 80}\n")
 
     # Aggregate by category
@@ -303,17 +451,18 @@ def visualize_garak_results(client, garak_job, benchmark_id="trustyai_garak::sta
         'Failed': 'sum',
         'Passed': 'sum'
     }).reset_index()
+    category_stats = category_stats[category_stats["Total"] > 0]
     category_stats['Failure_Rate'] = (category_stats['Failed'] / category_stats['Total'] * 100)
-    category_stats = category_stats.sort_values('Failure_Rate', ascending=False)
+    category_stats = category_stats.sort_values('Category', ascending=False)
 
     # Display category table
     display_df = category_stats.copy()
     display_df['Failure Rate (%)'] = display_df['Failure_Rate'].round(2)
-    print("\n📊 Results by Category:\n")
-    display(HTML(display_df[['Category', 'Total', 'Passed', 'Failed', 'Failure Rate (%)']].to_html(index=False)))
+    #print("\n📊 Results by Category:\n")
+    #display(HTML(display_df[['Category', 'Total', 'Passed', 'Failed', 'Failure Rate (%)']].to_html(index=False)))
 
     # Create visualizations
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 9), dpi=250)
 
     # Chart 1: Failure rate by category
     colors = ['#ff6b6b' if rate > 50 else '#ffd43b' if rate > 20 else '#51cf66'
@@ -322,7 +471,7 @@ def visualize_garak_results(client, garak_job, benchmark_id="trustyai_garak::sta
     bars1 = ax1.barh(category_stats['Category'], category_stats['Failure_Rate'],
                      color=colors, alpha=0.7, edgecolor='black')
 
-    ax1.set_xlabel('Failure Rate (%)', fontsize=12, fontweight='bold')
+    ax1.set_xlabel('Penetration Rate (%)', fontsize=12, fontweight='bold')
     ax1.set_title('Vulnerability Detection Rate by Category', fontsize=14, fontweight='bold')
     ax1.set_xlim(0, 100)
     ax1.axvline(x=50, color='gray', linestyle='--', alpha=0.5, label='50% threshold')
@@ -340,32 +489,41 @@ def visualize_garak_results(client, garak_job, benchmark_id="trustyai_garak::sta
     categories = category_stats['Category']
     x_pos = range(len(categories))
 
-    ax2.barh(x_pos, category_stats['Passed'], label='Passed',
+    ax2.barh(x_pos, category_stats['Passed'], label='Defended',
              color='#51cf66', alpha=0.7, edgecolor='black')
     ax2.barh(x_pos, category_stats['Failed'], left=category_stats['Passed'],
-             label='Failed', color='#ff6b6b', alpha=0.7, edgecolor='black')
+             label='Penetrated', color='#ff6b6b', alpha=0.7, edgecolor='black')
 
     ax2.set_yticks(x_pos)
     ax2.set_yticklabels(categories)
-    ax2.set_xlabel('Number of Tests', fontsize=12, fontweight='bold')
-    ax2.set_title('Test Volume by Category', fontsize=14, fontweight='bold')
+    ax2.set_xlabel('Number of Attacks', fontsize=12, fontweight='bold')
+    ax2.set_title('Attack Volume by Category', fontsize=14, fontweight='bold')
     ax2.legend()
     ax2.grid(axis='x', alpha=0.3)
 
+
     plt.tight_layout()
-    plt.show()
+    plt.close(fig)
+    #plt.show()
 
     # Top 10 most vulnerable probes
-    top_vulnerable_df = df.nlargest(10, 'Failure_Rate')[['Probe', 'Total', 'Failed', 'Failure_Rate']].copy()
+    probe_stats = df.groupby('Probe').agg({
+        'Total': 'sum',
+        'Failed': 'sum',
+        'Passed': 'sum',
+        'Failure_Rate': 'mean'
+    }).reset_index()
+    top_vulnerable_df = probe_stats.nlargest(10, 'Failure_Rate')[['Probe', 'Total', 'Failed', 'Failure_Rate']].copy()
 
     if not top_vulnerable_df.empty:
-        print("\n⚠️  Top 10 Most Vulnerable Probes:\n")
+        #print("\n⚠️  Top 10 Most Vulnerable Probes:\n")
         display_vulnerable = top_vulnerable_df.copy()
         display_vulnerable['Failure Rate (%)'] = display_vulnerable['Failure_Rate'].round(2)
-        display(HTML(display_vulnerable[['Probe', 'Total', 'Failed', 'Failure Rate (%)']].to_html(index=False)))
+        vulnerable_probes = HTML(display_vulnerable[['Probe', 'Total', 'Failed', 'Failure Rate (%)']].to_html(index=False))
 
         # Visualize top vulnerable probes
-        _, ax = plt.subplots(figsize=(12, 8))
+        top_vulnerable_df = top_vulnerable_df.sort_values('Failure_Rate', ascending=True)
+        fig2, ax = plt.subplots(figsize=(16, 9), dpi=250)
 
         failure_rates = top_vulnerable_df['Failure_Rate'].tolist()
         probe_names = top_vulnerable_df['Probe'].tolist()
@@ -390,16 +548,277 @@ def visualize_garak_results(client, garak_job, benchmark_id="trustyai_garak::sta
                    fontsize=10, fontweight='bold')
 
         plt.tight_layout()
-        plt.show()
+        plt.close(fig2)
 
-    return {
-        'all_results': df,
-        'category_stats': category_stats,
-        'top_vulnerable': top_vulnerable_df
+    return fig, vulnerable_probes, fig2
+
+def compare_garak_scans(protected_report, baseline_label="Without Guardrails", protected_label="With Guardrails"):
+    """
+    Compare two garak scans to show granular attack mitigation from guardrails
+
+    Args:
+        baseline_report: Garak report from unprotected model
+        protected_report: Garak report from guardrailed model
+        baseline_label: Label for baseline scan (default: "Without Guardrails")
+        protected_label: Label for protected scan (default: "With Guardrails")
+
+    Returns:
+        tuple: (comparison_fig, mitigation_fig, stats_dict)
+    """
+    # Parse baseline report
+    results = []
+    for entry in protected_report:
+        probe_name = entry['probe']
+
+        model_failed = int(entry['model_vulnerable'])
+        model_passed = 1-model_failed
+
+        guardrail_failed = int(entry['guardrail_vulnerable'])
+        guardrail_passed = 1-guardrail_failed
+
+        system_failed = int(entry['vulnerable'])
+        system_passed = 1-system_failed
+
+        category = probe_name.split('.')[0] if '.' in probe_name else 'Other'
+
+
+        results.append({
+            'Probe': probe_name,
+            'Category': category,
+            'Total': 1,
+            'Model_Failed': model_failed,
+            'Model_Passed': model_passed,
+            'Guardrail_Failed': guardrail_failed,
+            'Guardrail_Passed': guardrail_passed,
+            'Guardrail_Latency': entry['guardrail_latency'],
+            'System_Failed': system_failed,
+            'System_Passed': system_passed,
+        })
+
+    df = pd.DataFrame(results)
+
+    # Categorize each probe by protection source
+    df['Protection_Source'] = 'Neither'  # Default
+    df.loc[(df['Model_Passed'] == 1) & (df['Guardrail_Passed'] == 0), 'Protection_Source'] = 'Model Only'
+    df.loc[(df['Model_Passed'] == 0) & (df['Guardrail_Passed'] == 1), 'Protection_Source'] = 'Guardrail Only'
+    df.loc[(df['Model_Passed'] == 1) & (df['Guardrail_Passed'] == 1), 'Protection_Source'] = 'Both'
+
+    # Overall statistics
+    total_attacks = len(df)
+    total_model_failed = df['Model_Failed'].sum()
+    total_model_passed = df['Model_Passed'].sum()
+    total_system_failed = df['System_Failed'].sum()
+    total_system_passed = df['System_Passed'].sum()
+
+    attacks_mitigated = total_model_failed - total_system_failed
+    mitigation_rate = (attacks_mitigated / total_model_failed * 100) if total_model_failed > 0 else 0
+
+    # Print summary
+    print(f"\n{'=' * 80}")
+    print(f"  GARAK GUARDRAIL EFFECTIVENESS COMPARISON")
+    print(f"{'=' * 80}")
+    print(f"\n  {baseline_label} (Model Only):")
+    print(f"    Total Attacks:        {total_attacks:,}")
+    print(f"    Attacks Penetrated:   " + bcolor("RED", f"{total_model_failed:,} ({total_model_failed/total_attacks*100:.1f}%)"))
+    print(f"    Attacks Defended:     " + bcolor("GREEN", f"{total_model_passed:,} ({total_model_passed/total_attacks*100:.1f}%)"))
+
+    print(f"\n  {protected_label} (Model + Guardrails):")
+    print(f"    Total Attacks:        {total_attacks:,}")
+    print(f"    Attacks Penetrated:   " + bcolor("RED", f"{total_system_failed:,} ({total_system_failed/total_attacks*100:.1f}%)"))
+    print(f"    Attacks Defended:     " + bcolor("GREEN", f"{total_system_passed:,} ({total_system_passed/total_attacks*100:.1f}%)"))
+
+    print(f"\n  Guardrail Impact:")
+    print(f"    Attacks Mitigated:    " + bcolor("GREEN", f"{int(attacks_mitigated):,} ({mitigation_rate:.1f}% of baseline vulnerabilities)"))
+    print(f"\n  Protection Source Breakdown:")
+    for source in ['Model Only', 'Guardrail Only', 'Both', 'Neither']:
+        count = (df['Protection_Source'] == source).sum()
+        print(f"    {source:20s}: {count:,} ({count/total_attacks*100:.1f}%)")
+    print(f"{'=' * 80}\n")
+
+    # Category statistics
+    category_stats = df.groupby('Category').agg({
+        'Total': 'sum',
+        'Model_Failed': 'sum',
+        'Model_Passed': 'sum',
+        'System_Failed': 'sum',
+        'System_Passed': 'sum'
+    }).reset_index()
+
+
+    # Create visualizations
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 9), dpi=250)
+
+    # Chart 1: Overall Attack Defense Comparison
+    labels = [f'{baseline_label}\n(Model Only)', f'{protected_label}\n(Model + Guardrails)']
+    penetrated = [total_model_failed, total_system_failed]
+    defended = [total_model_passed, total_system_passed]
+
+    x = range(len(labels))
+    width = 0.6
+
+    ax1.bar(x, defended, width, label='Defended', color='#51cf66', alpha=0.8, edgecolor='black')
+    ax1.bar(x, penetrated, width, bottom=defended, label='Penetrated', color='#ff6b6b', alpha=0.8, edgecolor='black')
+
+    ax1.set_ylabel('Number of Attacks', fontsize=12, fontweight='bold')
+    ax1.set_title('Overall Attack Defense Comparison', fontsize=14, fontweight='bold')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(labels)
+    ax1.legend()
+    ax1.grid(axis='y', alpha=0.3)
+
+    # Add value labels
+    for i, (def_val, pen_val) in enumerate(zip(defended, penetrated)):
+        total = def_val + pen_val
+        if pen_val > 0:
+            ax1.text(i, def_val + pen_val/2, f'{int(pen_val):,}\n({pen_val/total*100:.1f}%)',
+                    ha='center', va='center', color='white', fontweight='bold', fontsize=11)
+
+    # Chart 2: Attack Penetration by Category
+    category_stats['Improvement'] = category_stats['Model_Failed'] - category_stats['System_Failed']
+    category_stats = category_stats[category_stats['Total'] > 0].sort_values('Model_Failed', ascending=True)
+
+    # Toggle for normalized view (percentage vs raw count)
+    normalize_category_chart = True
+
+    y_pos = range(len(category_stats))
+    width = 0.35
+
+    if normalize_category_chart:
+        # Calculate penetration rates as percentages
+        category_stats['Model_Failed_Pct'] = (category_stats['Model_Failed'] / category_stats['Total']) * 100
+        category_stats['System_Failed_Pct'] = (category_stats['System_Failed'] / category_stats['Total']) * 100
+
+        ax2.barh([y - width/2 for y in y_pos], category_stats['Model_Failed_Pct'],
+                 width, label='Model Only', color='#ff6b6b', alpha=0.7, edgecolor='black')
+        ax2.barh([y + width/2 for y in y_pos], category_stats['System_Failed_Pct'],
+                 width, label='Model + Guardrails', color='#51cf66', alpha=0.8, edgecolor='black')
+
+        ax2.set_xlabel('Penetration Rate (%)', fontsize=12, fontweight='bold')
+        ax2.set_xlim(0, 100)
+    else:
+        ax2.barh([y - width/2 for y in y_pos], category_stats['Model_Failed'],
+                 width, label='Model Only', color='#ff6b6b', alpha=0.7, edgecolor='black')
+        ax2.barh([y + width/2 for y in y_pos], category_stats['System_Failed'],
+                 width, label='Model + Guardrails', color='#51cf66', alpha=0.8, edgecolor='black')
+
+        ax2.set_xlabel('Penetrated Attacks', fontsize=12, fontweight='bold')
+
+    ax2.set_yticks(y_pos)
+    ax2.set_yticklabels(category_stats['Category'])
+    ax2.set_title('Attack Penetration by Category', fontsize=14, fontweight='bold')
+    ax2.legend(fontsize=10)
+    ax2.grid(axis='x', alpha=0.3)
+
+    # Chart 3: Protection Source Breakdown
+    protection_counts = df['Protection_Source'].value_counts()
+    colors_map = {
+        'Model Only': '#4dabf7',
+        'Guardrail Only': '#ffd43b',
+        'Both': '#51cf66',
+        'Neither': '#ff6b6b'
     }
 
+    # Ensure all categories present
+    for source in ['Model Only', 'Guardrail Only', 'Both', 'Neither']:
+        if source not in protection_counts:
+            protection_counts[source] = 0
 
-def populate_vector_db(client, dataset_df, column):
+    protection_counts = protection_counts[['Model Only', 'Guardrail Only', 'Both', 'Neither']]
+    colors = [colors_map[source] for source in protection_counts.index]
+
+    # Custom autopct function to show both count and percentage
+    def make_autopct(values):
+        def my_autopct(pct):
+            total = sum(values)
+            val = int(round(pct*total/100.0))
+            return f'{val:,}\n({pct:.1f}%)'
+        return my_autopct
+
+    # Create pie chart with larger radius to fill more of the subplot
+    wedges, texts, autotexts = ax3.pie(protection_counts.values,
+                                         labels=protection_counts.index,
+                                         autopct=make_autopct(protection_counts.values),
+                                         startangle=0,
+                                         colors=colors,
+                                         radius=1.3,  # Increase radius to make pie bigger
+                                         textprops={'fontsize': 9, 'fontweight': 'bold'},
+                                         labeldistance=1.03,  # Position labels further from center
+                                         pctdistance=0.82)    # Position percentages closer to edge
+
+    ax3.set_title('Protection Source: What Caught Each Attack?', fontsize=14, fontweight='bold', pad=20)
+
+    # Chart 4: Guardrail Latency Analysis - Necessary vs Unnecessary
+    necessary_guardrails = df[df['Protection_Source'] == 'Guardrail Only']  # Only guardrail caught it
+    unnecessary_guardrails = df[df['Protection_Source'].isin(['Model Only', 'Both'])]  # Model caught it
+
+    latency_data = []
+    labels_latency = []
+
+    if len(necessary_guardrails) > 0:
+        total_necessary = necessary_guardrails['Guardrail_Latency'].sum()
+        avg_necessary = necessary_guardrails['Guardrail_Latency'].mean()
+        latency_data.append(total_necessary)
+        labels_latency.append(f'Critical\n(Model was vulnerable to attack)\nn={len(necessary_guardrails)}')
+
+    if len(unnecessary_guardrails) > 0:
+        total_unnecessary = unnecessary_guardrails['Guardrail_Latency'].sum()
+        avg_unnecessary = unnecessary_guardrails['Guardrail_Latency'].mean()
+        latency_data.append(total_unnecessary)
+        labels_latency.append(f'Redundant\n(Model was not vulnerable to attack)\nn={len(unnecessary_guardrails)}')
+
+    colors_latency = ['#ffd43b', '#4dabf7']
+
+    # Convert latency data to minutes for display
+    latency_data_minutes = [val / 60 for val in latency_data]
+    bars = ax4.bar(range(len(latency_data_minutes)), latency_data_minutes, color=colors_latency,
+                   alpha=0.8, edgecolor='black', width=0.6)
+
+    ax4.set_xticks(range(len(labels_latency)))
+    ax4.set_xticklabels(labels_latency, fontsize=10)
+    ax4.set_ylabel('Total Latency (minutes)', fontsize=12, fontweight='bold')
+    ax4.set_title('Guardrail Latency Impact: Critical vs Redundant', fontsize=14, fontweight='bold')
+    ax4.grid(axis='y', alpha=0.3)
+
+    # Add value labels - position inside the bars to avoid overlap with title
+    for i, (bar, val_seconds) in enumerate(zip(bars, latency_data)):
+        height = bar.get_height()
+        n_attacks = len(necessary_guardrails) if i == 0 else len(unnecessary_guardrails)
+        avg_val = val_seconds / n_attacks if n_attacks > 0 else 0
+
+        # Format time as minutes and seconds
+        minutes = int(val_seconds // 60)
+        seconds = int(val_seconds % 60)
+        time_str = f'{minutes}m {seconds}s'
+
+        # Position text at the top inside the bar
+        ax4.text(bar.get_x() + bar.get_width() / 2, height * 0.95,
+                 f'{time_str}\navg: {avg_val:.3f}s',
+                 ha='center', va='top', fontweight='bold', fontsize=9, color='black')
+
+
+    plt.tight_layout(pad=2.0)
+    plt.savefig("guardrail_garak.png", dpi=200, bbox_inches='tight')
+    plt.close(fig)
+
+    # Statistics dictionary
+    stats_dict = {
+        'total_attacks': total_attacks,
+        'total_model_failed': int(total_model_failed),
+        'total_model_passed': int(total_model_passed),
+        'total_system_failed': int(total_system_failed),
+        'total_system_passed': int(total_system_passed),
+        'attacks_mitigated': int(attacks_mitigated),
+        'mitigation_rate': mitigation_rate,
+        'protection_breakdown': df['Protection_Source'].value_counts().to_dict(),
+        'necessary_guardrail_latency': necessary_guardrails['Guardrail_Latency'].sum() if len(necessary_guardrails) > 0 else 0,
+        'unnecessary_guardrail_latency': unnecessary_guardrails['Guardrail_Latency'].sum() if len(unnecessary_guardrails) > 0 else 0,
+        'df': df
+    }
+
+    return fig, stats_dict
+
+## RAGAS ==========
+def populate_vector_db(client, dataset_df):
     """
     Populate a vector database with context documents using OpenAI-compatible API
 
@@ -414,7 +833,7 @@ def populate_vector_db(client, dataset_df, column):
 
 
     contexts = set()
-    for reference in dataset_df[column]:
+    for reference in dataset_df["references"]:
         contexts.update(reference)
     contexts = list(contexts)
     total_docs = len(contexts)
@@ -459,212 +878,416 @@ def populate_vector_db(client, dataset_df, column):
             batch = []
     return client.vector_stores.retrieve(vector_store_id=vs.id)
 
+def generate_rag_samples(client, vector_store, dataset_df, num_references):
+    ragas_dataset = []
+    # Explicitly search vector store via REST API
+    for i, (_, row) in enumerate(dataset_df.iterrows()):
+        print(f"\rGenerating RAG samples: {i+1}/{len(dataset_df)}", end="")
 
+        task_description = "'Given a search query, retrieve relevant passages."
+        query = f'Instruct: {task_description}\nQuery:{row['text']}'
 
-def perform_rag_inferences(client, dataset_df, vector_db_id="finder_contexts",
-                          model_id="vllm/qwen3", num_samples=100):
-    """
-    Perform RAG inferences on dataset questions
-
-    Args:
-        client: LlamaStackClient instance
-        dataset_df: DataFrame with 'question' column
-        vector_db_id: ID of the vector database to query
-        model_id: Model to use for generation
-        num_samples: Number of samples to evaluate
-
-    Returns:
-        DataFrame with questions, contexts, answers, and ground truth
-    """
-
-    print(f"🔍 Performing RAG inferences on {num_samples} samples...")
-
-    # Sample questions from dataset
-    sample_df = dataset_df.sample(n=min(num_samples, len(dataset_df)), random_state=42).copy()
-
-    results = []
-
-    for idx, row in sample_df.iterrows():
-        question = row['question']
-        ground_truth = row.get('answer', '')
-
-        try:
-            # Retrieve relevant contexts from vector DB
-            retrieved_docs = client.vector_io.query(
-                vector_db_id=vector_db_id,
-                query=question,
-                k=3  # Retrieve top 3 most relevant documents
-            )
-
-            # Extract context text
-            contexts = [doc['content'] for doc in retrieved_docs.get('documents', [])]
-            context_text = "\n\n".join(contexts)
-
-            # Generate answer using RAG
-            messages = [
-                {
-                    "role": "system",
-                    "content": "You are a helpful financial assistant. Answer the question based on the provided context."
-                },
-                {
-                    "role": "user",
-                    "content": f"Context:\n{context_text}\n\nQuestion: {question}\n\nAnswer:"
-                }
-            ]
-
-            response = client.inference.chat_completion(
-                model_id=model_id,
-                messages=messages,
-                sampling_params={
-                    "temperature": 0.1,
-                    "max_tokens": 256
-                }
-            )
-
-            answer = response.completion_message.content
-
-            results.append({
-                'question': question,
-                'contexts': contexts,
-                'answer': answer,
-                'ground_truth': ground_truth
-            })
-
-            print(f"\r  • Completed {len(results)}/{num_samples} inferences...", end="")
-
-        except Exception as e:
-            print(f"\n  ⚠️  Error on question {idx}: {e}")
-            continue
-
-    print(f"\n✅ RAG inferences complete!")
-
-    return pd.DataFrame(results)
-
-
-def run_ragas_evaluation(rag_results_df, metrics=None):
-    """
-    Run RAGAS evaluation on RAG results
-
-    Args:
-        rag_results_df: DataFrame with columns: question, contexts, answer, ground_truth
-        metrics: List of RAGAS metrics to compute (default: all core metrics)
-
-    Returns:
-        dict: RAGAS evaluation results and visualizations
-    """
-
-    try:
-        from ragas import evaluate
-        from ragas.metrics import (
-            faithfulness,
-            answer_relevancy,
-            context_precision,
-            context_recall
+        search_results = client.vector_stores.search(
+            vector_store_id=vector_store.id,
+            query=query,
+            max_num_results=num_references,
         )
-        from datasets import Dataset
-    except ImportError:
-        print("❌ RAGAS library not installed. Install with: pip install ragas")
-        return None
+        contexts = [r.content[0].text for r in search_results.data if r.content]
+        context = "\n\n".join(contexts)
 
-    if metrics is None:
-        metrics = [faithfulness, answer_relevancy, context_precision, context_recall]
+        # Manually construct prompt with context
+        completion = client.chat.completions.create(
+            model="vllm/qwen3",
+            messages=[
+                {"role": "system", "content": "Use the provided context to answer queries. Keep answers brief."},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuery: {row['text']}"}
+            ],
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+            temperature=.7,
+            top_p=.8,
+            max_tokens=250,
+        )
 
-    print(f"📊 Running RAGAS evaluation with {len(metrics)} metrics...")
+        ragas_dataset.append({
+            "user_input": row['text'],
+            "response": completion.choices[0].message.content,
+            "retrieved_contexts": contexts,
+            "reference": row['answer']
+        })
+    print(" Done!")
+    pd.DataFrame(ragas_dataset).to_csv(f"ragas_dataset_{num_references}.csv")
+    return ragas_dataset
 
-    # Convert to HuggingFace Dataset format expected by RAGAS
-    ragas_dataset = Dataset.from_pandas(rag_results_df)
 
-    # Run evaluation
+def register_ragas_dataset(client, ragas_dataset, suffix):
+    from datetime import datetime
+
+    # De-register the dataset and benchmark if it already exists
+    dataset_id = "FinDER-RAGAS"
+    benchmark_id = f"trustyai_ragas::FinDER_{suffix}_{str(uuid.uuid4())}"
     try:
-        results = evaluate(ragas_dataset, metrics=metrics)
-
-        print(f"\n{'=' * 80}")
-        print(f"  RAGAS EVALUATION RESULTS")
-        print(f"{'=' * 80}")
-
-        # Display results
-        results_dict = {}
-        for metric_name, score in results.items():
-            results_dict[metric_name] = score
-            print(f"  {metric_name}: {score:.4f}")
-
-        print(f"{'=' * 80}\n")
-
-        # Create visualization
-        visualize_ragas_results(results_dict)
-
-        return {
-            'scores': results_dict,
-            'detailed_results': results
-        }
-
+        client.beta.datasets.unregister(dataset_id)
     except Exception as e:
-        print(f"❌ Error running RAGAS evaluation: {e}")
-        return None
+        pass
+
+    client.beta.datasets.register(
+        dataset_id=dataset_id,
+        purpose="eval/question-answer",  # RAG evaluation purpose
+        source={"type": "rows", "rows": ragas_dataset},
+        metadata={
+            "provider_id": "localfs",
+            "description": "FinDER Dataset",
+            "size": len(ragas_dataset),
+            "format": "ragas",
+            "created_at": datetime.now().isoformat(),
+        },
+    );
+
+    client.alpha.benchmarks.register(
+        benchmark_id=benchmark_id,
+        dataset_id=dataset_id,
+        scoring_functions=[
+            "answer_relevancy",  # How relevant is the answer to the question?
+        ],
+        provider_id="trustyai_ragas_inline",
+    );
+    return benchmark_id
 
 
-def visualize_ragas_results(scores_dict):
+def visualize_ragas_results(client, ragas_job_dict):
     """
-    Visualize RAGAS evaluation scores
+    Visualize RAGAS evaluation results
 
     Args:
-        scores_dict: Dictionary of metric names to scores
+        client: Llama Stack client
+        ragas_job: Job object from RAGAS evaluation
+        benchmark_id: Benchmark ID for the RAGAS evaluation
+        save_path: Optional path to save the visualization
+
+    Returns:
+        dict: Dictionary containing parsed results and statistics
     """
 
-    # Create DataFrame for visualization
-    df = pd.DataFrame([
-        {'Metric': metric.replace('_', ' ').title(), 'Score': score}
-        for metric, score in scores_dict.items()
-    ]).sort_values('Score', ascending=False)
+    ragas_job = ragas_job_dict["job"]
+    benchmark_id = ragas_job_dict["benchmark_id"]
 
-    # Display table
-    display_df = df.copy()
-    display_df['Score (%)'] = (display_df['Score'] * 100).round(2)
-    print("\n📊 RAGAS Metrics Summary:\n")
-    display(HTML(display_df[['Metric', 'Score (%)']].to_html(index=False)))
+    # Get evaluation results
+    response = client.alpha.eval.jobs.retrieve(job_id=ragas_job.job_id, benchmark_id=benchmark_id)
+
+    # Extract scores for all metrics
+    all_metrics = {}
+
+    for metric_name, metric_data in response.scores.items():
+        if hasattr(metric_data, 'score_rows') and hasattr(metric_data, 'aggregated_results'):
+            scores = [row['score'] for row in metric_data.score_rows]
+            aggregated = metric_data.aggregated_results.get(metric_name, 0)
+
+            all_metrics[metric_name] = {
+                'scores': scores,
+                'aggregated': aggregated
+            }
+
+    if not all_metrics:
+        print("❌ No RAGAS metrics found in results")
+        return None
+
+    # Process primary metric (first one found, typically answer_relevancy)
+    primary_metric = list(all_metrics.keys())[0]
+    metric_data = all_metrics[primary_metric]
+    scores = metric_data['scores']
+    aggregated_score = metric_data['aggregated']
+
+    # Calculate statistics
+    total_samples = len(scores)
+    zero_scores = sum(1 for s in scores if s == 0.0)
+    non_zero_scores = [s for s in scores if s > 0.0]
+    non_zero_count = len(non_zero_scores)
+
+    if non_zero_scores:
+        avg_non_zero = sum(non_zero_scores) / len(non_zero_scores)
+        sorted_scores = sorted(non_zero_scores)
+        median_non_zero = sorted_scores[len(sorted_scores) // 2]
+        variance = sum((x - avg_non_zero) ** 2 for x in non_zero_scores) / len(non_zero_scores)
+    else:
+        avg_non_zero = median_non_zero = std_non_zero = min_score = max_score = 0.0
+
+    # Print summary
+    print(f"\n{'=' * 80}")
+    print(f"  RAGAS EVALUATION RESULTS - {primary_metric.upper()}")
+    print(f"{'=' * 80}")
+    print(f"  Total Samples: {total_samples}")
+    print(f"  Relevant Answers: {non_zero_count} ({non_zero_count/total_samples*100:.1f}%)")
+    print(f"  Irrelevant Answers (score=0): {zero_scores} ({zero_scores/total_samples*100:.1f}%)")
+    print(f"  Aggregated Score: {aggregated_score:.4f}")
+    if non_zero_scores:
+        print(f"  Avg (relevant only): {avg_non_zero:.4f}")
+        print(f"  Median (relevant only): {median_non_zero:.4f}")
+    print(f"{'=' * 80}\n")
 
     # Create visualization
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 10), dpi=250)
 
-    # Bar chart
-    colors = ['#51cf66' if score >= 0.7 else '#ffd43b' if score >= 0.5 else '#ff6b6b'
-              for score in df['Score'].values]
+    # 1. Score Distribution Histogram
+    bins = [i/20 for i in range(21)]  # 0 to 1 in steps of 0.05
+    n, bin_edges, patches = ax1.hist(scores, bins=bins, edgecolor='black', alpha=0.7, color='steelblue')
 
-    bars = ax1.barh(df['Metric'], df['Score'] * 100, color=colors, alpha=0.7, edgecolor='black')
-    ax1.set_xlabel('Score (%)', fontsize=12, fontweight='bold')
-    ax1.set_title('RAGAS Metrics Performance', fontsize=14, fontweight='bold')
-    ax1.set_xlim(0, 100)
-    ax1.axvline(x=70, color='green', linestyle='--', alpha=0.5, label='Good (70%)')
-    ax1.axvline(x=50, color='orange', linestyle='--', alpha=0.5, label='Fair (50%)')
-    ax1.grid(axis='x', alpha=0.3)
-    ax1.legend()
+    # Color zero bin differently
+    if bin_edges[0] < 0.05:
+        patches[0].set_facecolor('coral')
 
-    # Add percentage labels
-    for bar, score in zip(bars, df['Score'].values):
-        width = bar.get_width()
-        ax1.text(width + 2, bar.get_y() + bar.get_height()/2,
-                f'{score*100:.1f}%', ha='left', va='center', fontsize=10, fontweight='bold')
+    ax1.axvline(aggregated_score, color='red', linestyle='--', linewidth=2,
+                label=f'Aggregated: {aggregated_score:.3f}')
+    if non_zero_scores:
+        ax1.axvline(avg_non_zero, color='green', linestyle='--', linewidth=2,
+                    label=f'Avg (non-zero): {avg_non_zero:.3f}')
 
-    # Radar chart
-    metrics_list = df['Metric'].tolist()
-    scores_list = df['Score'].tolist()
+    ax1.set_xlabel('Score', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Frequency', fontsize=12, fontweight='bold')
+    ax1.set_title(f'{primary_metric.replace("_", " ").title()} Distribution',
+                  fontsize=14, fontweight='bold')
+    ax1.legend(fontsize=10)
+    ax1.grid(True, alpha=0.3)
 
-    angles = [n / len(metrics_list) * 2 * 3.14159 for n in range(len(metrics_list))]
-    scores_list += scores_list[:1]  # Complete the circle
-    angles += angles[:1]
+    # 2. Relevance Distribution Pie Chart
+    labels = [f'Relevant\n({non_zero_count})', f'Irrelevant\n({zero_scores})']
+    sizes = [non_zero_count, zero_scores]
+    colors = ['#51cf66', '#ee0000']
+    explode = (0.05, 0.05)
 
-    ax2 = plt.subplot(122, polar=True)
-    ax2.plot(angles, scores_list, 'o-', linewidth=2, color='#ee0000', label='Scores')
-    ax2.fill(angles, scores_list, alpha=0.25, color='#ee0000')
-    ax2.set_xticks(angles[:-1])
-    ax2.set_xticklabels(metrics_list, size=10)
-    ax2.set_ylim(0, 1)
-    ax2.set_yticks([0.25, 0.5, 0.75, 1.0])
-    ax2.set_yticklabels(['25%', '50%', '75%', '100%'])
-    ax2.set_title('RAGAS Metrics Radar', fontsize=14, fontweight='bold', pad=20)
-    ax2.grid(True, alpha=0.3)
+    wedges, texts, autotexts = ax2.pie(sizes, explode=explode, labels=labels, colors=colors,
+                                         autopct='%1.1f%%', shadow=False, startangle=90)
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_fontweight('bold')
+        autotext.set_fontsize(11)
+
+    ax2.set_title('Answer Relevance Distribution', fontsize=14, fontweight='bold')
+
+    # 3. Score Range Breakdown (bar chart)
+    if non_zero_scores:
+        ranges = {
+            'Excellent\n(0.8-1.0)': sum(1 for s in non_zero_scores if s >= 0.8),
+            'Good\n(0.6-0.8)': sum(1 for s in non_zero_scores if 0.6 <= s < 0.8),
+            'Fair\n(0.4-0.6)': sum(1 for s in non_zero_scores if 0.4 <= s < 0.6),
+            'Poor\n(0.0-0.4)': sum(1 for s in non_zero_scores if s < 0.4)
+        }
+
+        range_colors = ['#51cf66', '#ffd43b', '#ffa94d', '#ff6b6b']
+        bars = ax3.bar(range(len(ranges)), list(ranges.values()),
+                      color=range_colors, alpha=0.7, edgecolor='black')
+
+        ax3.set_xticks(range(len(ranges)))
+        ax3.set_xticklabels(list(ranges.keys()), fontsize=10)
+        ax3.set_ylabel('Count', fontsize=12, fontweight='bold')
+        ax3.set_title('Score Distribution by Range', fontsize=14, fontweight='bold')
+        ax3.grid(axis='y', alpha=0.3)
+
+        # Add count labels on bars
+        for bar in bars:
+            height = bar.get_height()
+            if height > 0:
+                ax3.text(bar.get_x() + bar.get_width()/2., height,
+                        f'{int(height)}',
+                        ha='center', va='bottom', fontweight='bold')
+
+    # 4. Sequential Score Plot
+    x = list(range(1, len(scores) + 1))
+    colors_seq = ['coral' if s == 0 else 'steelblue' for s in scores]
+    ax4.scatter(x, scores, c=colors_seq, alpha=0.6, s=40)
+    ax4.axhline(aggregated_score, color='red', linestyle='--', linewidth=1.5, alpha=0.7,
+                label=f'Aggregated: {aggregated_score:.3f}')
+    if non_zero_scores:
+        ax4.axhline(avg_non_zero, color='green', linestyle='--', linewidth=1.5, alpha=0.7,
+                    label=f'Avg (non-zero): {avg_non_zero:.3f}')
+
+    ax4.set_xlabel('Sample Index', fontsize=12, fontweight='bold')
+    ax4.set_ylabel('Score', fontsize=12, fontweight='bold')
+    ax4.set_title('Scores by Sample', fontsize=14, fontweight='bold')
+    ax4.set_ylim([-0.05, 1.05])
+    ax4.legend(fontsize=10, loc='lower right')
+    ax4.grid(True, alpha=0.3)
+
+    plt.suptitle(f'RAGAS Evaluation - {primary_metric.replace("_", " ").title()}',
+                 fontsize=16, fontweight='bold')
 
     plt.tight_layout()
+
+    # Save figure
+    save_path = f'ragas_{primary_metric}_results.png'
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Visualization saved to: {save_path}")
+
     plt.show()
 
-    return df
+
+def compare_ragas_evaluations(client, evaluations, comparison_name="RAG System"):
+    """
+    Compare two RAGAS evaluation runs side-by-side
+
+    Args:
+        client: Llama Stack client
+        evaluations: List of dicts with "label", "job", "benchmark_id" for each RAG system
+                    Example: [{"label": "3 refs", "job": job1, "benchmark_id": id1},
+                              {"label": "5 refs", "job": job2, "benchmark_id": id2}]
+        comparison_name: Name for the comparison (e.g., "RAG System", "Reference Count")
+
+    Returns:
+        tuple: (display_html, fig) - HTML table and matplotlib figure
+    """
+
+    if len(evaluations) != 2:
+        raise ValueError("Currently only supports comparing exactly 2 evaluation runs")
+
+    labels = [evaluation["label"] for evaluation in evaluations]
+    first_label, second_label = labels[0], labels[1]
+
+    # Get results from both jobs
+    results = {}
+
+    for evaluation in evaluations:
+        label = evaluation["label"]
+        benchmark_id = evaluation["benchmark_id"]
+        job = evaluation["job"]
+
+        response = client.alpha.eval.jobs.retrieve(job_id=job.job_id, benchmark_id=benchmark_id)
+
+        # Extract primary metric scores
+        for metric_name, metric_data in response.scores.items():
+            if hasattr(metric_data, 'score_rows') and hasattr(metric_data, 'aggregated_results'):
+                scores = [row['score'] for row in metric_data.score_rows]
+                aggregated = metric_data.aggregated_results.get(metric_name, 0)
+
+                results[label] = {
+                    'scores': scores,
+                    'aggregated': aggregated,
+                    'metric': metric_name
+                }
+                break  # Only use first metric
+
+    # Calculate statistics for both
+    stats = {}
+    for label, data in results.items():
+        scores = data['scores']
+        total = len(scores)
+        non_zero = [s for s in scores if s > 0.0]
+        non_zero_count = len(non_zero)
+
+        stats[label] = {
+            'aggregated': data['aggregated'],
+            'total': total,
+            'relevant': non_zero_count,
+            'irrelevant': total - non_zero_count,
+            'relevance_rate': non_zero_count / total * 100 if total > 0 else 0,
+            'avg_relevant': sum(non_zero) / len(non_zero) if non_zero else 0,
+            'scores': scores
+        }
+
+    # Create comparison DataFrame
+    comparison_df = pd.DataFrame([
+        {
+            'System': first_label,
+            'Aggregated Score': round(stats[first_label]['aggregated'], 4),
+            'Relevance Rate (%)': round(stats[first_label]['relevance_rate'], 1),
+            'Avg (relevant)': round(stats[first_label]['avg_relevant'], 4),
+            'Relevant': stats[first_label]['relevant'],
+            'Irrelevant': stats[first_label]['irrelevant']
+        },
+        {
+            'System': second_label,
+            'Aggregated Score': round(stats[second_label]['aggregated'], 4),
+            'Relevance Rate (%)': round(stats[second_label]['relevance_rate'], 1),
+            'Avg (relevant)': round(stats[second_label]['avg_relevant'], 4),
+            'Relevant': stats[second_label]['relevant'],
+            'Irrelevant': stats[second_label]['irrelevant']
+        }
+    ])
+
+    # Calculate deltas
+    delta_aggregated = stats[second_label]['aggregated'] - stats[first_label]['aggregated']
+    delta_relevance_rate = stats[second_label]['relevance_rate'] - stats[first_label]['relevance_rate']
+
+    # Print summary
+    print(f"\n{'=' * 80}")
+    print(f"  RAGAS COMPARISON: {first_label} vs {second_label}")
+    print(f"{'=' * 80}")
+    print(f"  {first_label} Aggregated Score: {stats[first_label]['aggregated']:.4f}")
+    print(f"  {second_label} Aggregated Score: {stats[second_label]['aggregated']:.4f}")
+    print(f"  Delta: {delta_aggregated:+.4f} ({delta_aggregated/stats[first_label]['aggregated']*100:+.1f}%)")
+    print(f"  ")
+    print(f"  {first_label} Relevance Rate: {stats[first_label]['relevance_rate']:.1f}%")
+    print(f"  {second_label} Relevance Rate: {stats[second_label]['relevance_rate']:.1f}%")
+    print(f"  Delta: {delta_relevance_rate:+.1f} percentage points")
+    print(f"{'=' * 80}\n")
+
+    display_html = comparison_df.to_html(index=False)
+
+    # Create visualization
+    fig = plt.figure(figsize=(16, 9), dpi=250)
+    axes_label_size = 14
+    gs = fig.add_gridspec(2, 2, height_ratios=[1, 1], hspace=0.35, wspace=0.3)
+
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[1, :])  # Delta chart spans both columns
+
+    # Chart 1: First system distribution
+    bins = [i/20 for i in range(21)]
+    n1, _, patches1 = ax1.hist(stats[first_label]['scores'], bins=bins,
+                               edgecolor='black', alpha=0.7, color='steelblue')
+    if bins[0] < 0.05:
+        patches1[0].set_facecolor('coral')
+
+    ax1.axvline(stats[first_label]['aggregated'], color='red', linestyle='--', linewidth=2,
+                label=f"Aggregated: {stats[first_label]['aggregated']:.3f}")
+    ax1.set_title(f'{first_label}', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Score', fontsize=axes_label_size)
+    ax1.set_ylabel('Frequency', fontsize=axes_label_size)
+    ax1.set_xlim(0, 1)
+    ax1.legend(fontsize=10)
+    ax1.grid(axis='both', alpha=0.3)
+    ax1.tick_params(axis='both', labelsize=axes_label_size)
+
+    # Chart 2: Second system distribution
+    n2, _, patches2 = ax2.hist(stats[second_label]['scores'], bins=bins,
+                               edgecolor='black', alpha=0.7, color='steelblue')
+    if bins[0] < 0.05:
+        patches2[0].set_facecolor('coral')
+
+    ax2.axvline(stats[second_label]['aggregated'], color='red', linestyle='--', linewidth=2,
+                label=f"Aggregated: {stats[second_label]['aggregated']:.3f}")
+    ax2.set_title(f'{second_label}', fontsize=14, fontweight='bold')
+    ax2.set_xlabel('Score', fontsize=axes_label_size)
+    ax2.set_xlim(0, 1)
+    ax2.legend(fontsize=10)
+    ax2.grid(axis='both', alpha=0.3)
+    ax2.tick_params(axis='both', labelsize=axes_label_size)
+
+    # Chart 3: Sample-by-sample delta
+    deltas = [stats[second_label]['scores'][i] - stats[first_label]['scores'][i]
+              for i in range(len(stats[first_label]['scores']))]
+
+    x = list(range(1, len(deltas) + 1))
+    colors_delta = ['#51cf66' if d > 0 else '#ff6b6b' if d < 0 else 'gray' for d in deltas]
+
+    ax3.scatter(x, deltas, c=colors_delta, alpha=0.6, s=30)
+    ax3.axhline(y=0, color='black', linestyle='-', linewidth=1)
+    ax3.axhline(y=sum(deltas)/len(deltas), color='blue', linestyle='--', linewidth=2,
+                label=f'Avg Delta: {sum(deltas)/len(deltas):+.3f}')
+
+    ax3.set_xlabel('Sample Index', fontsize=axes_label_size)
+    ax3.set_ylabel(f'Score Delta ({second_label} - {first_label})', fontsize=axes_label_size)
+    ax3.set_title(f'Sample-by-Sample Comparison', fontsize=14, fontweight='bold')
+    ax3.legend(fontsize=10)
+    ax3.grid(True, alpha=0.3)
+    ax3.tick_params(axis='both', labelsize=axes_label_size)
+
+    # Overall title
+    fig.suptitle(f'RAGAS {comparison_name} Comparison: {first_label} vs {second_label}',
+                 fontsize=16, fontweight='bold', y=0.96)
+
+    # Save and display
+    plt.savefig(f'ragas_comparison_{first_label}_vs_{second_label}.png', dpi=300, bbox_inches='tight')
+    print(f"✅ Comparison saved to: ragas_comparison_{first_label}_vs_{second_label}.png")
+    plt.show()
+
+    return display_html, fig
