@@ -11,7 +11,7 @@ assessment, risk analysis, risk mitigation, and continuous RAG evaluations. Ever
 ## Viewing the Demo
 1) If you'd just like to see the visual material for the demo, you can view the accompanying presentation in your browser: 
    
-   > [Presentation](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/8bd6f7bc82904b62e3ed42a86712fc424dc596d5/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) 
+   > [Presentation](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) 
 
    This will let you see the workflow and visualizations without needing to run or set anything up.
 2) You can view the [pre-computed notebook here.](notebooks/fsi_safety_demo_notebook.ipynb)
