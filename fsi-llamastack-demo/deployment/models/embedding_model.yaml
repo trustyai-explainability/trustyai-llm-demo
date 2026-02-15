@@ -1,0 +1,100 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-runtime-embedding
+  annotations:
+    openshift.io/display-name: vLLM ServingRuntime for KServe
+    opendatahub.io/template-display-name: vLLM ServingRuntime for KServe
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+  labels:
+    opendatahub.io/dashboard: 'true'
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: '8080'
+    openshift.io/display-name: vLLM ServingRuntime for KServe
+  labels:
+    opendatahub.io/dashboard: 'true'
+  containers:
+    - args:
+        - '--port=8080'
+        - '--model=/mnt/models'
+        - '--served-model-name={{.Name}}'
+        - '--dtype=float16'
+        - '--enforce-eager'
+        - '--tensor-parallel-size=1'
+        - '--task=embed'
+      command:
+        - python
+        - '-m'
+        - vllm.entrypoints.openai.api_server
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: VLLM_CACHE_ROOT
+          value: /tmp/
+      image: 'quay.io/modh/vllm@sha256:4b9dd97838cf5f4b2c9dde0357abef2a7953965f028a07446e78f2a412df90fb'
+      name: kserve-container
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM
+  volumes:
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 2Gi
+      name: shm
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: embedding
+  labels:
+    opendatahub.io/dashboard: 'true'
+  annotations:
+    openshift.io/display-name:  embedding
+    serving.knative.openshift.io/enablePassthrough: 'true'
+    security.opendatahub.io/enable-auth: 'true'
+    serving.kserve.io/deploymentMode: RawDeployment
+    sidecar.istio.io/inject: 'true'
+    sidecar.istio.io/rewriteAppHTTPProbers: 'true'
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+#    affinity:
+#      nodeAffinity:
+#        requiredDuringSchedulingIgnoredDuringExecution:
+#          nodeSelectorTerms:
+#            - matchExpressions:
+#                - key: nvidia.com/gpu.family
+#                  operator: NotIn
+#                  values:
+#                    - ampere
+    model:
+      modelFormat:
+        name: vLLM
+      name: ''
+      resources:
+        limits:
+          cpu: '1'
+          memory: 8Gi
+          nvidia.com/gpu: '1'
+        requests:
+          cpu: '1'
+          memory: 8Gi
+          nvidia.com/gpu: '1'
+      runtime: vllm-runtime-embedding
+      storage:
+        key: aws-connection-data-connection
+        path: Qwen3-Embedding-0.6B
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists

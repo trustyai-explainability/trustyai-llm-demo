@@ -1,0 +1,248 @@
+/*-- scss:defaults --*/
+
+// Red Hat Colors
+$red-hat-red: #EE0000;
+$red-hat-dark-red: #A30000;
+$red-hat-black: #000000;
+
+// Fonts
+@import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&display=swap');
+
+// Theme colors
+$body-bg: #ffffff;
+$body-color: #000000;
+$link-color: $red-hat-red;
+$link-color-hover: $red-hat-dark-red;
+
+// Headings
+$presentation-heading-font: 'Red Hat Display', sans-serif;
+$presentation-heading-color: $red-hat-red;
+$presentation-h1-font-size: 2.5em;
+$presentation-h2-font-size: 2em;
+$presentation-h3-font-size: 1.5em;
+
+// Font sizes
+$presentation-font-size-root: 40px;
+$presentation-line-height: 1.6;
+
+// Other
+$code-block-bg: #f5f5f5;
+$code-block-border-color: #cccccc;
+
+/*-- scss:rules --*/
+
+.reveal {
+  font-family: 'Red Hat Display', sans-serif;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+  font-family: 'Red Hat Display', sans-serif;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.reveal h1 {
+  color: $red-hat-red;
+  border-bottom: 3px solid $red-hat-red;
+  padding-bottom: 0.3em;
+}
+
+.reveal code {
+  color: $red-hat-red;
+}
+
+.reveal h2 {
+  color: $red-hat-red;
+  margin-top: 1em;
+}
+
+.reveal h3 {
+  color: $red-hat-dark-red;
+}
+
+.reveal h6 {
+  color: black;
+  font-weight: 100;
+  font-size: .5em;
+}
+
+
+.reveal strong,
+.reveal b {
+  color: $red-hat-red;
+  font-weight: 700;
+}
+
+.reveal em {
+  color: $red-hat-red;
+  font-style: italic;
+}
+
+.reveal a {
+  color: $red-hat-red;
+  text-decoration: none;
+}
+
+.reveal a:hover {
+  color: $red-hat-red;
+  text-decoration: underline;
+}
+
+// Code blocks
+.reveal pre {
+  background-color: $code-block-bg;
+  border: 1px solid $code-block-border-color;
+  border-radius: 4px;
+  font-size: .7em;
+  max-height: 50%;
+  top: 0px;
+  overflow: auto;
+  padding: 1em;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reveal pre code {
+  max-height: none !important;
+  white-space: pre;
+}
+
+// Fix code jump on line highlighting
+// Remove top/left from reveal.js's code fragments to prevent jump
+.reveal pre > code:not(:first-child).fragment {
+  padding: 34px 9px;
+}
+
+// Target Quarto-specific code containers
+.reveal .cell-output pre,
+.reveal .cell-code pre,
+.reveal div.sourceCode {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.reveal .cell-output pre code,
+.reveal .cell-code pre code {
+  max-height: none !important;
+}
+
+// Lists
+.reveal ul,
+.reveal ol {
+  margin-left: 1em;
+}
+
+.reveal li {
+  margin-bottom: 0.5em;
+}
+
+// Slide numbers
+.reveal .slide-number {
+  color: $red-hat-red;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 5px 10px;
+  border-radius: 3px;
+}
+
+// Alternative: custom class for slides that should start higher
+.reveal section.top-align {
+  justify-content: flex-start;
+  padding-top: 2em;
+}
+
+// Fix excessive line spacing in ANSI-colored terminal output
+.reveal .ansi-escaped-output pre {
+  line-height: .8 !important;
+}
+
+.reveal .scrollable-cell .cell-output pre {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+// Optional: Fragment overlay container for keeping fragments in same position
+.reveal .fragment-overlay {
+  position: relative;
+  min-height: 100px; // Adjust based on your tallest fragment
+}
+
+.reveal .fragment-overlay .fragment {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+// Fix output cell widths to match code cells
+.reveal .cell-output pre {
+  max-width: 100%;
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.reveal .cell-output-display {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+// Constrain images to slide width
+.reveal .cell-output-display img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+// Scale tables appropriately
+.reveal .cell-output-display table {
+  max-width: 100%;
+  font-size: 0.7em;
+}
+
+// Custom cell height classes - for both notebook cells and markdown code blocks
+// For markdown code blocks, the class goes on the <pre> element itself
+.reveal pre.tall-code {
+  max-height: 800px !important;
+}
+
+.reveal pre.medium-code {
+  max-height: 600px !important;
+}
+
+.reveal pre.short-code {
+  max-height: 300px !important;
+}
+
+.reveal pre.shortish-code {
+  max-height: 400px !important;
+}
+
+.reveal pre.full-height-code {
+  max-height: 900px !important;
+}
+
+// For notebook cells, the class goes on the parent <div class="cell">
+.reveal .cell.tall-code pre {
+  max-height: 800px !important;
+}
+
+.reveal .cell.medium-code pre {
+  max-height: 600px !important;
+}
+
+.reveal .cell.short-code pre {
+  max-height: 300px !important;
+}
+
+.reveal .cell.shortish-code pre {
+  max-height: 400px !important;
+}
+
+
+.reveal .cell.full-height-code pre {
+  max-height: 900px !important;
+}

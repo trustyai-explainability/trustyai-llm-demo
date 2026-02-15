@@ -1,0 +1,45 @@
+apiVersion: llamastack.io/v1alpha1
+kind: LlamaStackDistribution
+metadata:
+  name: llama-stack-distro
+spec:
+  replicas: 1
+  server:
+    containerSpec:
+      env:
+        - name: MILVUS_DB_PATH
+          value: ~/opt/app-root/src/.llama/milvus.db
+        - name: INFERENCE_MODEL
+          value: vllm/qwen3
+        - name: INFERENCE_MODEL_SOURCE
+          value: Qwen/Qwen3-8B
+        - name: EMBEDDING_MODEL
+          value: vllm-embedding/embedding
+        - name: VLLM_URL
+          value: "https://qwen3-predictor:8443/v1"
+        - name: VLLM_EMBEDDING_URL
+          value: "https://embedding-predictor:8443/v1"
+        - name: TRUSTYAI_LMEVAL_TLS
+          value: "true"
+        - name: LLS_ROUTE
+          value: "http://llama-stack-distro-service:8321"
+        - name: KUBEFLOW_PIPELINES_ENDPOINT
+          value: "https://ds-pipeline-kfp-server-model-namespace.apps.rosa.trustyai-rob.4osv.p3.openshiftapps.com"
+        - name: KUBEFLOW_NAMESPACE
+          value: model_namespace
+        - name: KUBEFLOW_BASE_IMAGE
+          value: "quay.io/trustyai/trustyai-garak-lls-provider-dsp:latest"
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: guardrails-service-account-token
+              key: token
+      name: llama-stack
+      port: 8321
+    userConfig:
+      configMapName: llama-stack-config
+    distribution:
+      image: quay.io/opendatahub/llama-stack:28af8f71dbb8ed867f6d4213a17f18000c89c65f
+      imagePullPolicy: Always
+    storage:
+      size: 20Gi

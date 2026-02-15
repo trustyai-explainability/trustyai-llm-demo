@@ -1,0 +1,28 @@
+task: cra_lending_club
+dataset_path: Salesforce/FinEval
+dataset_name: CRA-LendingClub
+test_split: test
+output_type: multiple_choice
+doc_to_text: query
+doc_to_choice: ["good", "bad"]
+doc_to_target: answer
+process_results: !function custom_metrics.evaluate
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: true_positive
+    aggregation: !function custom_metrics.count
+    higher_is_better: true
+  - metric: true_negative
+    aggregation: !function custom_metrics.count
+    higher_is_better: true
+  - metric: false_positive
+    aggregation: !function custom_metrics.count
+    higher_is_better: false
+  - metric: false_negative
+    aggregation: !function custom_metrics.count
+    higher_is_better: false
+metadata:
+  version: 2.0
+  description: "CRA LendingClub binary classification with full confusion matrix metrics"
