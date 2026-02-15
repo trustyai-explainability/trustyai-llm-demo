@@ -1,5 +1,5 @@
 # TrustyAI Llama-Stack Financial Services Demo
-> 🪧 View the accompanying presentation [here]((https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) )
+> 🪧 [View the accompanying presentation here](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html)
 
 This is the code-base for the February 2026 OpenShift AI Safety and Eval demo in Istanbul.
 
