@@ -1,5 +1,9 @@
 # TrustyAI Llama-Stack Financial Services Demo
-> 🪧 [View the accompanying presentation here](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html)
+
+---
+🪧 [View the accompanying presentation here!](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html)
+
+---
 
 This is the code-base for the February 2026 OpenShift AI Safety and Eval demo in Istanbul.
 
@@ -21,9 +25,7 @@ Specifically, we'll take a [Qwen/Qwen3-30B-Instruct](https://huggingface.co/Qwen
 6) Use Ragas to perform continuous evaluation of the quality of our `Qwen3-30B` + `Qwen3-0.6B-embedding` RAG system, using the [FinDER](https://huggingface.co/datasets/Linq-AI-Research/FinDER) financial question answering dataset.
  
 ## Viewing the Demo
-1) To just see the visual material for the demo, you can view the accompanying presentation: 
-
-   > 🪧 [Presentation](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) 
+1) To just see the visual material for the demo, you can view the [accompanying presentation.](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) 
    
 2) You can view the [pre-computed notebook here.](notebooks/fsi_safety_demo_notebook.ipynb)
 3) If you'd like to replicate the demo in your own environment, follow the steps below.
