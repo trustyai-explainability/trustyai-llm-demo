@@ -1,19 +1,30 @@
 # TrustyAI Llama-Stack Financial Services Demo
-This demo shows all of TrustyAI's current Llama Stack features:
-1) LM-Eval-Harness
-2) NVIDIA Garak
-3) NVIDIA NeMo-Guardrails
-4) Ragas
+> 🪧 View the accompanying presentation [here]((https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) )
+
+This is the code-base for the February 2026 OpenShift AI Safety and Eval demo in Istanbul.
+
+This demo walks through all of TrustyAI's current Llama Stack features:
+1) [LM-Eval-Harness](https://github.com/EleutherAI/lm-evaluation-harness)
+2) [NVIDIA Garak](https://github.com/NVIDIA/garak/tree/main)
+3) [NVIDIA-NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails)
+4) [Ragas](https://github.com/vibrantlabsai/ragas)
 
 We'll use all four of these tools in a financial services use-case, walking through initial capability
-assessment, risk analysis, risk mitigation, and continuous RAG evaluations. Everything runs self-hosted in OpenShift AI.
+assessment, risk analysis, risk mitigation, and continuous RAG evaluations. Everything runs self-hosted in OpenShift AI. 
 
+Specifically, we'll take a [Qwen/Qwen3-30B-Instruct](https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507) model for inference and a [Qwen/Qwen3-Embedding-0.6B](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) for embedding, and:
+1) Evaluate `Qwen3-30B`'s accounting, microeconomics, and macroeconomics knowledge in both Turkish and English via the [Global-MMLU](https://huggingface.co/datasets/CohereLabs/Global-MMLU) evaluation in lm-evaluation-harness
+2) Run a custom evaluation in lm-evaluation-harness to evaluate `Qwen3-30B`'s aptitude for loan assessments via the [CRA-LendingClub](https://huggingface.co/datasets/TheFinAI/cra-lendingclub/viewer) dataset.
+3) Use NVIDIA Garak to assess our model's susceptibility to prompt injection
+4) Use NVIDIA-NeMo Guardrails to secure our model against prompt injection attempts
+5) Re-run the Garak scan against our guardrails to verify the new security of the system
+6) Use Ragas to perform continuous evaluation of the quality of our `Qwen3-30B` + `Qwen3-0.6B-embedding` RAG system, using the [FinDER](https://huggingface.co/datasets/Linq-AI-Research/FinDER) financial question answering dataset.
+ 
 ## Viewing the Demo
-1) If you'd just like to see the visual material for the demo, you can view the accompanying presentation in your browser: 
-   
-   > [Presentation](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) 
+1) To just see the visual material for the demo, you can view the accompanying presentation: 
 
-   This will let you see the workflow and visualizations without needing to run or set anything up.
+   > 🪧 [Presentation](https://rawcdn.githack.com/trustyai-explainability/trustyai-llm-demo/d693cf7c3e3cc548dd6357ab1383520bef1e8d41/fsi-llamastack-demo/notebooks/fsi_safety_demo_presentation.html) 
+   
 2) You can view the [pre-computed notebook here.](notebooks/fsi_safety_demo_notebook.ipynb)
 3) If you'd like to replicate the demo in your own environment, follow the steps below.
 
