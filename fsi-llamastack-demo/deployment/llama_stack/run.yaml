@@ -1,0 +1,364 @@
+    # Llama Stack Configuration
+    version: '2'
+    image_name:  lls-distro
+    apis:
+    - inference
+    - safety
+    - files
+    - eval
+    - shields
+    - agents
+    - vector_io
+    - tool_runtime
+    - files
+    - datasetio
+    tool_groups:
+      - toolgroup_id: builtin::rag
+        provider_id: rag-runtime
+    providers:
+      eval:
+        - provider_id: trustyai_ragas_inline
+          provider_type: inline::trustyai_ragas
+          module: llama_stack_provider_ragas.inline
+          config:
+            embedding_model: ${env.EMBEDDING_MODEL}
+            ragas_config:
+              batch_size: 1
+            kvstore:
+              namespace: ragas
+              backend: kv_default
+        - provider_id: trustyai_garak
+          provider_type: remote::trustyai_garak
+          module: llama_stack_provider_trustyai_garak
+          config:
+            llama_stack_url: ${env.LLS_ROUTE}
+            tls_verify: ${env.GARAK_TLS_VERIFY:=true}
+            kubeflow_config:
+              pipelines_endpoint: ${env.KUBEFLOW_PIPELINES_ENDPOINT}
+              namespace: ${env.KUBEFLOW_NAMESPACE}
+              base_image: ${env.KUBEFLOW_BASE_IMAGE}
+              pipelines_api_token: ${env.TOKEN:=}
+        - provider_id: trustyai_lmeval
+          provider_type: remote::trustyai_lmeval
+          module: llama_stack_provider_lmeval
+          config:
+            use_k8s: ${env.TRUSTYAI_LMEVAL_USE_K8S:=true}
+            base_url: ${env.LLS_ROUTE:=}/v1
+            namespace: model-namespace
+      agents:
+      - config:
+          persistence:
+            agent_state:
+              backend: kv_agents
+              namespace: agents::meta_reference
+            responses:
+              backend: sql_agents
+              max_write_queue_size: 10000
+              num_writers: 4
+              table_name: agents_responses
+        provider_id: meta-reference
+        provider_type: inline::meta-reference
+      files:
+        - config:
+            metadata_store:
+              backend: sql_default
+              table_name: files_metadata
+            storage_dir: /opt/app-root/src/.llama/distributions/rh/files
+          provider_id: meta-reference-files
+          provider_type: inline::localfs
+      inference:
+      - provider_id: vllm
+        provider_type: "remote::vllm"
+        config:
+          base_url: "${env.VLLM_URL:=}"
+          tls_verify: false
+          api_token: "${env.TOKEN}"
+      - provider_id: vllm-embedding
+        provider_type: "remote::vllm"
+        config:
+          base_url: "${env.VLLM_EMBEDDING_URL:=}"
+          tls_verify: false
+          api_token: "${env.TOKEN}"
+      datasetio:
+      - provider_id: localfs
+        provider_type: inline::localfs
+        config:
+          kvstore:
+            namespace: datasetio::localfs
+            backend: kv_default
+      safety:
+        - provider_id: nvidia
+          provider_type: remote::nvidia
+          config:
+            guardrails_service_url: http://nemoguardrails
+            config_id: main-config
+      vector_io:
+        - provider_id: milvus
+          provider_type: inline::milvus
+          config:
+            db_path: /opt/app-root/src/.llama/distributions/rh/milvus.db
+            persistence:
+              backend: kv_default
+              namespace: vector_io::milvus
+    registered_resources:
+      models:
+      - metadata:
+          embedding_dimension: 1024
+        model_id: ${env.EMBEDDING_MODEL}
+        provider_id: vllm-embedding
+        provider_model_id: embedding
+        model_type: embedding
+      shields:
+        - shield_id: nemo-guardrails-prompt-injection
+          provider_id: nvidia
+          provider_resource_id: nemo-model
+      vector_stores:
+        - vector_store_id: milvus
+          provider_id: milvus
+          embedding_model: ${env.EMBEDDING_MODEL}
+          embedding_dimension: 1024
+      benchmarks:
+        - benchmark_id: trustyai_garak::standard
+          dataset_id: garak
+          scoring_functions:
+            - garak_scoring
+          provider_id: trustyai_garak
+          provider_benchmark_id: standard
+        - benchmark_id: "trustyai_lmeval::cra_lending_club"
+          dataset_id: "trustyai_lmeval::cra_lending_club"
+          scoring_functions: [ "string" ]
+          provider_benchmark_id: string
+          provider_id: trustyai_lmeval
+          metadata:
+            custom_task:
+              git:
+                url: "https://github.com/trustyai-explainability/trustyai-llm-demo.git"
+                branch: "Istanbul"
+                path: "istanbul-v2/evaluation_tasks/"
+            input:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            offline:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
+        - benchmark_id: "trustyai_lmeval::global_mmlu_finance_english"
+          dataset_id: "trustyai_lmeval::global_mmlu_finance_english"
+          scoring_functions: [ "string" ]
+          provider_benchmark_id: string
+          provider_id: trustyai_lmeval
+          metadata:
+            custom_task:
+              git:
+                url: "https://github.com/trustyai-explainability/trustyai-llm-demo.git"
+                branch: "Istanbul"
+                path: "istanbul-v2/evaluation_tasks/"
+            input:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            offline:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
+        - benchmark_id: "trustyai_lmeval::global_mmlu_finance_turkish"
+          dataset_id: "trustyai_lmeval::global_mmlu_finance_turkish"
+          scoring_functions: [ "string" ]
+          provider_benchmark_id: string
+          provider_id: trustyai_lmeval
+          metadata:
+            custom_task:
+              git:
+                url: "https://github.com/trustyai-explainability/trustyai-llm-demo.git"
+                branch: "Istanbul"
+                path: "istanbul-v2/evaluation_tasks/"
+            input:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            offline:
+              storage:
+                s3:
+                  accessKeyId:
+                    name: aws-connection-data-connection
+                    key: AWS_ACCESS_KEY_ID
+                  secretAccessKey:
+                    name: aws-connection-data-connection
+                    key: AWS_SECRET_ACCESS_KEY
+                  bucket:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_BUCKET
+                  endpoint:
+                    name: aws-connection-data-connection
+                    key: AWS_S3_ENDPOINT
+                  region:
+                    name: aws-connection-data-connection
+                    key: AWS_DEFAULT_REGION
+                  path: ""
+                  verifySSL: false
+            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
+        - benchmark_id: "trustyai_lmeval::arc_easy"
+          dataset_id: "trustyai_lmeval::arc_easy"
+          scoring_functions: ["string"]
+          provider_benchmark_id: string
+          provider_id: trustyai_lmeval
+          metadata:
+            tokenized_requests: False
+            tokenizer: ${env.INFERENCE_MODEL_SOURCE}
+    server:
+      port: 8321
+    storage:
+      backends:
+        kv_agents:
+          db_path: /opt/app-root/src/.llama/distributions/rh/agents_store.db
+          type: kv_sqlite
+        kv_datasetio_huggingface:
+          db_path: /opt/app-root/src/.llama/distributions/rh/huggingface_datasetio.db
+          type: kv_sqlite
+        kv_datasetio_localfs:
+          db_path: /opt/app-root/src/.llama/distributions/rh/localfs_datasetio.db
+          type: kv_sqlite
+        kv_default:
+          db_path: /opt/app-root/src/.llama/distributions/rh/kvstore.db
+          type: kv_sqlite
+        kv_faiss:
+          db_path: /opt/app-root/src/.llama/distributions/rh/faiss.db
+          type: kv_sqlite
+        kv_milvus_inline:
+          db_path: /opt/app-root/src/.llama/distributions/rh/milvus_inline_registry.db
+          type: kv_sqlite
+        kv_milvus_remote:
+          db_path: /opt/app-root/src/.llama/distributions/rh/milvus_remote_registry.db
+          type: kv_sqlite
+        sql_agents:
+          db_path: /opt/app-root/src/.llama/distributions/rh/responses_store.db
+          type: sql_sqlite
+        sql_default:
+          db_path: /opt/app-root/src/.llama/distributions/rh/sql_store.db
+          type: sql_sqlite
+        sql_files:
+          db_path: /opt/app-root/src/.llama/distributions/rh/files_metadata.db
+          type: sql_sqlite
+        sql_inference:
+          db_path: /opt/app-root/src/.llama/distributions/rh/inference_store.db
+          type: sql_sqlite
+      stores:
+        conversations:
+          backend: sql_default
+          table_name: openai_conversations
+        inference:
+          backend: sql_inference
+          max_write_queue_size: 10000
+          num_writers: 4
+          table_name: inference_store
+        metadata:
+          backend: kv_default
+          namespace: registry
+      vector_io:
+      - config:
+          db_path: /opt/app-root/src/.llama/distributions/rh/milvus.db
+          persistence:
+            backend: kv_milvus_inline
+            namespace: vector_io::milvus
+        provider_id: milvus
+        provider_type: inline::milvus
+      tool_runtime:
+      - config:
+          api_key: '********'
+          max_results: 3
+        provider_id: brave-search
+        provider_type: remote::brave-search
+      - config:
+          api_key: '********'
+          max_results: 3
+        provider_id: tavily-search
+        provider_type: remote::tavily-search
+      - config: {}
+        provider_id: rag-runtime
+        provider_type: inline::rag-runtime
+      - config: {}
+        provider_id: model-context-protocol
+        provider_type: remote::model-context-protocol

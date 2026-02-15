@@ -1,0 +1,103 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-runtime
+  annotations:
+    openshift.io/display-name: vLLM ServingRuntime for KServe
+    opendatahub.io/template-display-name: vLLM ServingRuntime for KServe
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+  labels:
+    opendatahub.io/dashboard: 'true'
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: '8080'
+    openshift.io/display-name: vLLM ServingRuntime for KServe
+  labels:
+    opendatahub.io/dashboard: 'true'
+  containers:
+    - args:
+        - '--port=8080'
+        - '--model=/mnt/models'
+        - '--served-model-name={{.Name}}'
+        - '--dtype=float16'
+        - '--max-model-len=16384'
+        - '--tensor-parallel-size=4'
+        - '--gpu-memory-utilization=0.85'
+        - '--max-num-seqs=32'
+        - '--max-num-batched-tokens=32768'
+        - '--swap-space=4'
+      command:
+        - python
+        - '-m'
+        - vllm.entrypoints.openai.api_server
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: VLLM_CACHE_ROOT
+          value: /tmp/
+      image: 'quay.io/modh/vllm@sha256:4b9dd97838cf5f4b2c9dde0357abef2a7953965f028a07446e78f2a412df90fb'
+      name: kserve-container
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM
+  volumes:
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 8Gi
+      name: shm
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: qwen3
+  labels:
+    opendatahub.io/dashboard: 'true'
+  annotations:
+    openshift.io/display-name: qwen3
+    serving.knative.openshift.io/enablePassthrough: 'true'
+    security.opendatahub.io/enable-auth: 'true'
+    serving.kserve.io/deploymentMode: RawDeployment
+    sidecar.istio.io/inject: 'true'
+    sidecar.istio.io/rewriteAppHTTPProbers: 'true'
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+#    affinity:
+#      nodeAffinity:
+#        requiredDuringSchedulingIgnoredDuringExecution:
+#          nodeSelectorTerms:
+#            - matchExpressions:
+#                - key: nvidia.com/gpu.family
+#                  operator: In
+#                  values:
+#                    - ampere
+    model:
+      modelFormat:
+        name: vLLM
+      name: ''
+      resources:
+        limits:
+          cpu: '4'
+          memory: 48Gi
+          nvidia.com/gpu: '4'
+        requests:
+          cpu: '4'
+          memory: 48Gi
+          nvidia.com/gpu: '4'
+      runtime: vllm-runtime
+      storage:
+        key: aws-connection-data-connection
+        path: Qwen3-30B-A3B-Instruct-2507
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists

@@ -1,0 +1,10 @@
+group: global_mmlu_finance_turkish
+task:
+  - global_mmlu_full_tr_high_school_microeconomics
+  - global_mmlu_full_tr_high_school_macroeconomics
+  - global_mmlu_full_tr_professional_accounting
+aggregate_metric_list:
+  - metric: acc
+    weight_by_size: True
+metadata:
+  version: 2
