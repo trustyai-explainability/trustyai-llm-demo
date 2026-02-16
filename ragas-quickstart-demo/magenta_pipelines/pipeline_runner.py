@@ -112,6 +112,7 @@ class PipelineRunner:
             run_name=f"ragas-eval-run-{job_id}",
             namespace=self.kfp_config.namespace,
             experiment_name="lls-provider-ragas-runs",
+            enable_caching=self.kfp_config.enable_caching,
         )
 
         return run_result.run_id

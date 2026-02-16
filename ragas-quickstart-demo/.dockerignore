@@ -1,11 +1,8 @@
-.venv
-.git
-.gitignore
-.dockerignore
-.github
-.vscode
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Ignore all files in the root directory
+*
+
+# Except the ones in the following directories
+!magenta_pipelines/
+!pyproject.toml
+!README.md
+!Containerfile

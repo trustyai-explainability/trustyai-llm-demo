@@ -19,9 +19,14 @@ dependencies = [
     "pydantic",
     "ipykernel",
     "dotenv",
+    "mlflow>=3.0.0",
 ]
+
 [dependency-groups]
 dev = [
     "ruff",
     "mypy",
 ]
+
+[project.entry-points."mlflow.model_evaluator"]
+ragas_kubeflow = "magenta_pipelines.mlflow_client:RagasKubeflowEvaluator"

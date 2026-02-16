@@ -95,3 +95,6 @@ _build/
 
 # Local development notes
 notes.org
+
+# mlflow
+mlartifacts/
