@@ -44,7 +44,7 @@ DataScienceCluster, make sure that:
 2) This demo uses a combination of existing and preview TrustyAI 
 features, so we'll install a custom deployment of the TrustyAI operator:
     ```shell
-    oc apply -f deployment/trustyai_bundle.yaml -n redhat-ods-applications`
+    oc apply -f deployment/trustyai_bundle.yaml -n redhat-ods-applications
     ```
 3. Start our Kubeflow Pipeline server, create the required service accounts, and download the necessary model artifacts:
     ```shell
