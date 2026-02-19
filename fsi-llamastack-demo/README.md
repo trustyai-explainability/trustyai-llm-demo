@@ -68,6 +68,7 @@ features, so we'll install a custom deployment of the TrustyAI operator:
     ```shell
     oc create configmap llama-stack-config --from-file=deployment/llama_stack/run.yaml -n model-namespace
     oc apply -f deployment/llama_stack/lls_distro.yaml
+    oc expose service llama-stack-distro-service --name=lls-route
     ```
 
 ## Running the Demo
