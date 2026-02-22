@@ -1,0 +1,99 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: guardrails-detector-runtime-violence
+  annotations:
+    openshift.io/display-name: Guardrails Detector ServingRuntime for KServe
+    # opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+  labels:
+    opendatahub.io/dashboard: 'true'
+    trustyai/guardrails: 'true'
+spec:
+  annotations:
+    prometheus.io/port: '8080'
+    prometheus.io/path: '/metrics'
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: guardrails-detector-huggingface
+  containers:
+    - name: kserve-container
+      # image: quay.io/rh-ee-mmisiura/hf-detector:transformers_better_tokenizer_handling
+      image: quay.io/opendatahub/guardrails-detector-huggingface-runtime:odh-3.1
+      command:
+        - uvicorn
+        - app:app
+      args:
+        - "--workers"
+        - "1"
+        - "--host"
+        - "0.0.0.0"
+        - "--port"
+        - "8000"
+        - "--log-config"
+        - "/common/log_conf.yaml"
+      env:
+        - name: MODEL_DIR
+          value: /mnt/models
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: TRITON_CACHE_DIR
+          value: /tmp/.triton
+        - name: TORCH_COMPILE_DISABLE
+          value: "1"
+      ports:
+        - containerPort: 8000
+          protocol: TCP
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: violence-detector
+  labels:
+    opendatahub.io/dashboard: 'true'
+    trustyai/guardrails: 'true'
+  annotations:
+    openshift.io/display-name: violence-detector
+    serving.knative.openshift.io/enablePassthrough: 'true'
+    sidecar.istio.io/inject: 'true'
+    sidecar.istio.io/rewriteAppHTTPProbers: 'true'
+    serving.kserve.io/deploymentMode: RawDeployment
+    security.opendatahub.io/enable-auth: 'false'
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+    # tolerations:
+    #   - effect: NoSchedule
+    #     key: nvidia.com/gpu
+    #     operator: Exists
+    model:
+      modelFormat:
+        name: guardrails-detector-huggingface
+      name: ''
+      runtime: guardrails-detector-runtime-violence
+      storage:
+        key: aws-connection-minio-data-connection-detector-models
+        path: XLM-T_finetuned_violence_twitter
+      resources:
+        limits:
+          cpu: '1'
+          memory: 6Gi
+          # nvidia.com/gpu: '1'
+        requests:
+          cpu: '500m'
+          memory: 4Gi
+          # nvidia.com/gpu: '1'
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: violence-detector-route
+spec:
+  to:
+    kind: Service
+    name: violence-detector-predictor
+  port:
+    targetPort: https
+  tls:
+    termination: reencrypt

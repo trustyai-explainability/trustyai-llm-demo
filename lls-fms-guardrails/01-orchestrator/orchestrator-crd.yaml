@@ -1,0 +1,69 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: fms-orchestr8-config-nlp
+data:
+  config.yaml: |
+    detectors:
+      built-in-detector:
+        type: text_contents
+        service:
+            hostname: "127.0.0.1"
+            port: 8080
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+      harassment-detector-predictor:
+        type: text_contents
+        service:
+            hostname: "harassment-detector-predictor.lls-fms-guardrails.svc.cluster.local"
+            port: 8000
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+      hate-speech-detector-predictor:
+        type: text_contents
+        service:
+            hostname: "hate-speech-detector-predictor.lls-fms-guardrails.svc.cluster.local"
+            port: 8000
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+      jailbreaks-detector-predictor:
+        type: text_contents
+        service:
+            hostname: "jailbreaks-detector-predictor.lls-fms-guardrails.svc.cluster.local"
+            port: 8000
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+      self-harm-detector-predictor:
+        type: text_contents
+        service:
+            hostname: "self-harm-detector-predictor.lls-fms-guardrails.svc.cluster.local"
+            port: 8000
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+      toxicity-detector-predictor:
+        type: text_contents
+        service:
+            hostname: "toxicity-detector-predictor.lls-fms-guardrails.svc.cluster.local"
+            port: 8000
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+      violence-detector-predictor:
+        type: text_contents
+        service:
+            hostname: "violence-detector-predictor.lls-fms-guardrails.svc.cluster.local"
+            port: 8000
+        chunker_id: whole_doc_chunker
+        default_threshold: 0.5
+---
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: GuardrailsOrchestrator
+metadata:
+  name: guardrails-orchestrator
+  annotations:
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  orchestratorConfig: "fms-orchestr8-config-nlp"
+  enableBuiltInDetectors: true
+  enableGuardrailsGateway: false
+  replicas: 1
+---
