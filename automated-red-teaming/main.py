@@ -21,7 +21,13 @@ def _():
     mo.md(r"""
     # Automated Red Teaming
 
-    yada yada
+    This notebook demonstrates an end-to-end automated red teaming pipeline for LLM safety evaluation.
+
+    We start with a **harm taxonomy** that defines categories of unsafe behavior (e.g., illegal activity, fraud).
+    Using **SDG Hub**, we generate diverse adversarial prompts that attempt to elicit harmful responses.
+    These prompts are then fed into **Garak**, a security testing framework that probes the target LLM.
+
+    The final output is an interactive report showing which attacks succeeded or failed.
     """)
     return
 
@@ -44,7 +50,13 @@ def _():
 def _():
     mo.md(r"""
     # SDG Hub
-    Using SDG Hub we'll generate a dataset of harmful prompts based on the taxonomy in input
+
+    SDG Hub is a synthetic data generation framework that creates adversarial prompts from a taxonomy.
+
+    The flow samples across multiple dimensions: demographics, expertise level, geography, and language style.
+    This produces realistic attack scenarios that mimic how real users might attempt to misuse the model.
+
+    Each taxonomy category (e.g., "Fraud") gets expanded into multiple prompt variations.
     """)
     return
 
@@ -73,7 +85,9 @@ def _(taxonomy_dataset):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Here's a view of the dataset that has been generated
+    Below is the generated dataset of adversarial prompts.
+
+    Each row includes the prompt text and metadata explaining why it targets a specific harm category.
     """)
     return
 
@@ -87,7 +101,12 @@ def _(harmful_prompts_dataset):
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Harmful prompts → Garak intents
+    # Harmful Prompts → Garak Intents
+
+    Garak uses "intents" to define what harmful behavior it should test for.
+    Here we convert our SDG-generated prompts into Garak's intent format.
+
+    Each intent file contains prompts grouped by harm category, ready for security testing.
     """)
     return
 
@@ -117,6 +136,11 @@ def _(harmful_prompts_dataset):
 def _():
     mo.md(r"""
     # Run Garak
+
+    Garak is an LLM vulnerability scanner that probes models for unsafe behavior.
+
+    It applies multiple attack strategies (probes) to each intent and uses a judge model to classify responses.
+    Responses are categorized as: **complied**, **rejected**, **alternative**, or **other**.
     """)
     return
 
@@ -133,8 +157,12 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    # Explore results
-    Here's an embedded view of the HTML output that gets generated
+    # Explore Results
+
+    The interactive report below visualizes Garak's findings.
+
+    It shows pass/fail rates across harm categories and attack strategies.
+    Use this to identify which types of attacks your model is most vulnerable to.
     """)
     return
 
@@ -164,7 +192,10 @@ def _():
 @app.cell(hide_code=True)
 def _():
     mo.md(r"""
-    Here's a low level overview of the actual messages that have been sent to the target LLM
+    The table below shows the raw conversation data from Garak's evaluation.
+
+    You can filter by outcome to inspect specific cases where the model complied or refused.
+    This helps understand exactly how the model responded to each adversarial prompt.
     """)
     return
 
