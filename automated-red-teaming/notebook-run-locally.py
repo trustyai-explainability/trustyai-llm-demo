@@ -38,6 +38,39 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    mo.md(r"""
+    ## LLMs setup
+
+    Configure the two models used in this pipeline:
+
+    - **Challenger LLM** — Generates adversarial prompts (via SDG Hub) and judges target responses (via Garak detectors)
+    - **Target LLM** — The model under test that will be probed for unsafe behavior
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _():
+    challenger_model = mo.ui.text(label="Challenger LLM model:", value="gemma-2-2b-it-abliterated", full_width=True)
+    challenger_api_base = mo.ui.text(label="Challenger LLM API base:", value="http://localhost:8000/v1", full_width=True)
+    challenger_api_key = mo.ui.text(label="Challenger LLM API key:", value="sk-1234", full_width=True)
+
+    mo.vstack([challenger_model, challenger_api_base, challenger_api_key])
+    return challenger_api_base, challenger_api_key, challenger_model
+
+
+@app.cell(hide_code=True)
+def _():
+    target_name = mo.ui.text(label="Target system:", value="openai/gpt-oss-20b", full_width=True)
+    target_api_base = mo.ui.text(label="Target system API base:", value="http://localhost:8000/v1", full_width=True)
+    target_api_key = mo.ui.text(label="Target system API key:", value="sk-1234", full_width=True)
+
+    mo.vstack([target_name, target_api_base, target_api_key])
+    return target_api_base, target_api_key, target_name
+
+
 @app.cell
 def _():
     taxonomy_dataset_file = project_root / "resources/taxonomy.json"
@@ -61,20 +94,34 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _():
+    num_samples = mo.ui.number(label="Number of samples per category:", value=10, start=1, stop=100)
+
+    num_samples
+    return (num_samples,)
+
+
 @app.cell
-def _(taxonomy_dataset):
+def _(
+    challenger_api_base,
+    challenger_api_key,
+    challenger_model,
+    num_samples,
+    taxonomy_dataset,
+):
     from sdg_hub import Flow
 
     sdg_flow = Flow.from_yaml(project_root / "resources/sdg-flow.yaml")
 
-    # Configure the model
-    attacker_model = "hosted_vllm/gemma-2-2b-it-abliterated"
-    attacker_api_base = "http://localhost:8000/v1"
+    custom_cfg = sdg_flow.blocks[0].get_config()
+    custom_cfg["num_samples"] = num_samples.value
+    sdg_flow.blocks[0] = sdg_flow.blocks[0].from_config(custom_cfg)
 
     sdg_flow.set_model_config(
-        model=attacker_model,
-        api_base=attacker_api_base,
-        # api_key="EMPTY",
+        model="hosted_vllm/" + challenger_model.value,
+        api_base=challenger_api_base.value,
+        api_key=challenger_api_key.value,
     )
 
     harmful_prompts_dataset = sdg_flow.generate(taxonomy_dataset, max_concurrency=10)
@@ -112,7 +159,7 @@ def _():
 
 
 @app.cell(hide_code=True)
-def _(harmful_prompts_dataset):
+def _(harmful_prompts_dataset, num_samples):
     from llama_stack_provider_trustyai_garak.intents import generate_intents_from_dataset
 
     # Delete all intents that are already present
@@ -125,7 +172,7 @@ def _(harmful_prompts_dataset):
         category_column_name="policy_concept",
         prompt_column_name="prompt",
         category_description_column_name="concept_definition",
-        take_per_category=5
+        take_per_category=num_samples.value
     )
 
     mo.accordion({f.name: json.loads(f.read_text()) for f in sorted(intent_path.glob("*.json"))})
@@ -145,12 +192,58 @@ def _():
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _():
-    import garak.cli
+    max_dan_samples = mo.ui.number(label="Max DAN samples per intent:", value=5, start=1, stop=100)
+    max_dan_samples
+    return (max_dan_samples,)
 
+
+@app.cell(hide_code=True)
+def _(
+    challenger_api_base,
+    challenger_model,
+    max_dan_samples,
+    target_api_base,
+    target_api_key,
+    target_name,
+):
+    import garak.cli
+    import yaml
+    import tempfile
+
+    # Load base config
     config_path = project_root / "resources/garak.yaml"
-    garak.cli.main(["--config", str(config_path)])
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    # Wire target LLM
+    config["plugins"]["target_name"] = target_name.value
+    config["plugins"]["generators"]["openai"]["OpenAICompatible"]["uri"] = target_api_base.value
+
+    # Wire detector (challenger) LLM
+    config["plugins"]["detectors"]["judge"]["detector_model_name"] = challenger_model.value
+    config["plugins"]["detectors"]["judge"]["detector_model_config"]["uri"] = challenger_api_base.value
+
+    # Wire TAP probe models (also use challenger)
+    tap_cfg = config["plugins"]["probes"]["tap"]["TAPIntent"]
+    tap_cfg["attack_model_name"] = challenger_model.value
+    tap_cfg["attack_model_config"]["uri"] = challenger_api_base.value
+    tap_cfg["evaluator_model_name"] = challenger_model.value
+    tap_cfg["evaluator_model_config"]["uri"] = challenger_api_base.value
+
+    # Wire SPO probe settings
+    config["plugins"]["probes"]["spo"]["SPOIntent"]["max_dan_samples"] = max_dan_samples.value
+
+    # Set API keys
+    os.environ["OPENAICOMPATIBLE_API_KEY"] = target_api_key.value
+
+    # Write updated config and run
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as tmp:
+        yaml.dump(config, tmp)
+        tmp_config_path = tmp.name
+
+    garak.cli.main(["--config", tmp_config_path])
     return
 
 

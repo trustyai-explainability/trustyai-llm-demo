@@ -12,4 +12,5 @@ dependencies = [
     "marimo>=0.21.1",
     # see: https://docs.marimo.io/guides/editor_features/watching/?h=vscode#watching-for-changes-to-your-notebook
     "watchdog>=6.0.0",
+    "pylint>=4.0.5",
 ]
