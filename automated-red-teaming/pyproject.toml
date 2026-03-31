@@ -1,0 +1,16 @@
+[project]
+name = "automated-red-teaming"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "sdg-hub @ git+https://github.com/Red-Hat-AI-Innovation-Team/sdg_hub.git@v0.8.8",
+    "garak @ git+https://github.com/trustyai-explainability/garak@automated-red-teaming",
+    "llama-stack-provider-trustyai-garak @ git+https://github.com/trustyai-explainability/llama-stack-provider-trustyai-garak@automated-red-teaming",
+    # Using marimo instead of Jupyter notebooks
+    "marimo>=0.21.1",
+    # see: https://docs.marimo.io/guides/editor_features/watching/?h=vscode#watching-for-changes-to-your-notebook
+    "watchdog>=6.0.0",
+    "pylint>=4.0.5",
+]
