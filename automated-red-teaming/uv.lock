@@ -715,8 +715,8 @@ wheels = [
 
 [[package]]
 name = "garak"
-version = "0.14.1+rhaiv.6"
-source = { git = "https://github.com/trustyai-explainability/garak?rev=automated-red-teaming#c6d7966479775fb1ce43b714865013eb3e8edef8" }
+version = "0.14.1+rhaiv.7"
+source = { git = "https://github.com/trustyai-explainability/garak?rev=automated-red-teaming#349c01f9b96f910cc9fc672941c6517a4341c0b1" }
 dependencies = [
     { name = "accelerate" },
     { name = "avidtools" },
