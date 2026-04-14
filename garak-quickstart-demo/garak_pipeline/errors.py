@@ -1,19 +1,9 @@
-class GarakError(Exception):
-    """Base exception for Garak errors"""
-    pass
+"""Re-export error classes from the main package (single source of truth)."""
 
+from llama_stack_provider_trustyai_garak.errors import (  # noqa: F401
+    GarakConfigError,
+    GarakError,
+    GarakValidationError,
+)
 
-class GarakConfigError(GarakError):
-    """Configuration related errors"""
-    pass
-
-
-class GarakValidationError(GarakError):
-    """Validation related errors"""
-    pass
-
-
-class GarakScanError(GarakError):
-    """Scan execution errors"""
-    pass
-
+__all__ = ["GarakError", "GarakConfigError", "GarakValidationError"]

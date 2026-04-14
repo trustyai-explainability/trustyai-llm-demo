@@ -18,18 +18,15 @@ def __getattr__(name: str):
     if name == "PREDEFINED_BENCHMARKS":
         from .config import PREDEFINED_BENCHMARKS
         return PREDEFINED_BENCHMARKS
-    if name == "GarakConfig":
-        from .config import GarakConfig
-        return GarakConfig
     if name == "KubeflowConfig":
         from .config import KubeflowConfig
         return KubeflowConfig
-    if name == "ScanConfig":
-        from .config import ScanConfig
-        return ScanConfig
     if name == "ModelConfig":
         from .config import ModelConfig
         return ModelConfig
+    if name == "IntentsModelConfig":
+        from .config import IntentsModelConfig
+        return IntentsModelConfig
     if name == "GarakError":
         from .errors import GarakError
         return GarakError
@@ -40,10 +37,9 @@ __all__ = [
     "EvalConfig",
     "BenchmarkConfig",
     "BenchmarkRegistry",
+    "IntentsModelConfig",
     "PREDEFINED_BENCHMARKS",
-    "GarakConfig",
     "KubeflowConfig",
-    "ScanConfig",
     "ModelConfig",
     "PipelineRunner",
     "ScanJob",
