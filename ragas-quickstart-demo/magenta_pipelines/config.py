@@ -45,6 +45,10 @@ class KubeflowConfig(BaseSettings):
         description="Base image for Kubeflow pipeline components",
     )
 
+    enable_caching: bool = Field(
+        default=False, description="Enable caching for Kubeflow pipeline components"
+    )
+
     model_config = ConfigDict(env_file=".env", env_prefix="KUBEFLOW_", extra="ignore")
 
 
