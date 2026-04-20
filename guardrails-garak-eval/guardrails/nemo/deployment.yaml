@@ -1,0 +1,26 @@
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: NemoGuardrails
+metadata:
+  name: nemo
+spec:
+  nemoConfigs:
+    - name: custom-detectors
+      default: true
+      configMaps:
+        - config-custom-detectors
+  env:
+    - name: LLM_API_BASE
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: api-base
+    - name: LLM_MODEL_NAME
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: model-name
+    - name: LLM_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: api-key
