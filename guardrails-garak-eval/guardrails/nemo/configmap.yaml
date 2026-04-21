@@ -63,11 +63,11 @@ data:
 
     DETECTOR_PROMPT_URL = os.getenv(
         "DETECTOR_PROMPT_URL",
-        "http://detector-prompt-predictor:80/api/v1/text/contents"
+        "http://detector-prompt-predictor:8000/api/v1/text/contents"
     )
     DETECTOR_HAP_URL = os.getenv(
         "DETECTOR_HAP_URL",
-        "http://detector-hap-predictor:80/api/v1/text/contents"
+        "http://detector-hap-predictor:8000/api/v1/text/contents"
     )
     LINGUA_DETECTOR_URL = os.getenv(
         "LINGUA_DETECTOR_URL",
