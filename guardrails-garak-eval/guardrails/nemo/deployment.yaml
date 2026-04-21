@@ -3,6 +3,7 @@ kind: NemoGuardrails
 metadata:
   name: nemo
 spec:
+  replicas: 4
   nemoConfigs:
     - name: custom-detectors
       default: true
