@@ -1,0 +1,57 @@
+# minio.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      initContainers:
+      - name: create-bucket
+        image: quay.io/minio/minio:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          mkdir -p /data/tempo
+          echo "Bucket 'tempo' created."
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      containers:
+      - name: minio
+        image: quay.io/minio/minio:latest
+        args:
+        - server
+        - /data
+        env:
+        - name: MINIO_ROOT_USER
+          value: minioadmin
+        - name: MINIO_ROOT_PASSWORD
+          value: minioadmin
+        ports:
+        - containerPort: 9000
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+spec:
+  ports:
+  - port: 9000
+    targetPort: 9000
+  selector:
+    app: minio

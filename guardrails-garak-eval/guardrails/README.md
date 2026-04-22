@@ -26,13 +26,14 @@ oc apply -f guardrails/detectors/
 export LLM_API_BASE="https://INSERT_API_BASE_HERE/v1"
 export LLM_MODEL_NAME="INSERT_MODEL_NAME_HERE"
 export LLM_API_KEY="INSERT_KEY_HERE"
+export TEMPO_ENDPOINT="INSERT_TEMPO_ENDPOINT_HERE"
 ```
 
 3. Deploy the NeMo server with guardrails configuration:
 
 ```bash
 ENVS='${LLM_API_BASE} ${LLM_MODEL_NAME} ${LLM_API_KEY}'
-envsubst "$ENVS" < guardrails/nemo/secret.yaml  | oc apply -f -
+envsubst "$ENVS" < guardrails/nemo/secret.yaml | oc apply -f -
 envsubst "$ENVS" < guardrails/nemo/configmap.yaml | oc apply -f -
 oc apply -f guardrails/nemo/deployment.yaml
 ```
@@ -199,3 +200,36 @@ should block with something along the lines of
 }
 ```
 
+## Configuration with Grafana Dashboard and Opentelemetry
+
+To enable tracing and visualize guardrails data in Grafana, follow these additional steps:
+
+0. Deploy tempo stack 
+
+```bash
+oc apply -f tempo/
+```
+
+1. Deploy Grafana with pre-configured dashboard for NeMo Guardrails:
+
+```bash
+oc apply -f grafana/
+```
+
+2. Update NeMo configuration to enable OpenTelemetry tracing and set Tempo endpoint:
+
+```bash
+ENVS='${LLM_API_BASE} ${LLM_MODEL_NAME} ${LLM_API_KEY} ${TEMPO_ENDPOINT}'
+envsubst "$ENVS" < guardrails/nemo/secret.yaml | oc apply -f -
+envsubst "$ENVS" < guardrails/nemo/configmap-otel.yaml | oc apply -f -
+oc apply -f guardrails/nemo/deployment.yaml
+```
+
+3. Access the dashboard:
+
+```bash
+GRAFANA_ROUTE=$(oc get route grafana -o jsonpath='{.spec.host}')
+echo "https://$GRAFANA_ROUTE"
+```
+
+Open the URL and navigate to Dashboards > NeMo Guardrails.

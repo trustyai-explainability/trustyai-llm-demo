@@ -25,3 +25,14 @@ spec:
         secretKeyRef:
           name: llm-secret
           key: api-key
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: tempo-endpoint
+    - name: OTEL_SERVICE_NAME
+      value: "nemo-guardrails"
+    - name: OTEL_EXPORTER_OTLP_PROTOCOL
+      value: "grpc"
+    - name: OTEL_METRICS_EXPORTER
+      value: "none"
