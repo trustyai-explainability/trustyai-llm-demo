@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dan-regex
+data:
+  config.yaml: |
+    models:
+      - type: main
+        engine: openai
+        parameters:
+          openai_api_base: ${LLM_API_BASE}
+          model_name: ${LLM_MODEL_NAME}
+          api_key: ${LLM_API_KEY}
+
+    tracing:
+      enabled: true
+      span_format: opentelemetry
+      enable_content_capture: true
+      adapters:
+        - name: OpenTelemetry
+          
+    rails:
+      config:
+        regex_detection:
+          input:
+            patterns:
+              - "\\bDAN\\b"
+            case_insensitive: true
+      input:
+        flows:
+          - regex check input
+
+  rails.co: |
+    # Using built-in self-check rails
