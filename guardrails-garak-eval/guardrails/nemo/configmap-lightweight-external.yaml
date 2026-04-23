@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: config-custom-detectors
+  name: config-lightweight-external
 data:
   config.yaml: |
     models:
@@ -12,6 +12,13 @@ data:
           model_name: ${LLM_MODEL_NAME}
           api_key: ${LLM_API_KEY}
 
+    tracing:
+      enabled: true
+      span_format: opentelemetry
+      enable_content_capture: true
+      adapters:
+        - name: OpenTelemetry
+          
     rails:
       input:
         flows:

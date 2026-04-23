@@ -43,6 +43,7 @@ data:
                 "params": [
                   { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && name = \"POST /v1/chat/completions\"}" },
                   { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
                   { "key": "start", "value": "${__from:date:seconds}" },
                   { "key": "end", "value": "${__to:date:seconds}" }
                 ]
@@ -87,6 +88,7 @@ data:
                 "params": [
                   { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true}" },
                   { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
                   { "key": "start", "value": "${__from:date:seconds}" },
                   { "key": "end", "value": "${__to:date:seconds}" }
                 ]
@@ -131,6 +133,7 @@ data:
                 "params": [
                   { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && name = \"POST /v1/chat/completions\"}" },
                   { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
                   { "key": "start", "value": "${__from:date:seconds}" },
                   { "key": "end", "value": "${__to:date:seconds}" }
                 ]
@@ -155,6 +158,7 @@ data:
                 "params": [
                   { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true}" },
                   { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
                   { "key": "start", "value": "${__from:date:seconds}" },
                   { "key": "end", "value": "${__to:date:seconds}" }
                 ]
@@ -207,6 +211,7 @@ data:
                 "params": [
                   { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true && span.rail.type = \"input\"}" },
                   { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
                   { "key": "start", "value": "${__from:date:seconds}" },
                   { "key": "end", "value": "${__to:date:seconds}" }
                 ]
@@ -251,6 +256,7 @@ data:
                 "params": [
                   { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true && span.rail.type = \"output\"}" },
                   { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
                   { "key": "start", "value": "${__from:date:seconds}" },
                   { "key": "end", "value": "${__to:date:seconds}" }
                 ]
@@ -264,128 +270,10 @@ data:
           ]
         },
         {
-          "type": "heatmap",
-          "title": "Duration heatmap",
-          "gridPos": {
-            "x": 0,
-            "y": 6,
-            "w": 24,
-            "h": 10
-          },
-          "datasource": {
-            "uid": "tempo",
-            "type": "tempo"
-          },
-          "id": 7,
-          "targets": [
-            {
-              "datasource": {
-                "type": "tempo",
-                "uid": "tempo"
-              },
-              "refId": "A",
-              "queryType": "traceqlSearch",
-              "limit": 9999,
-              "tableType": "spans",
-              "filters": [
-                {
-                  "id": "9d27d1a0",
-                  "operator": "=",
-                  "scope": "span"
-                },
-                {
-                  "id": "service-name",
-                  "tag": "service.name",
-                  "operator": "=",
-                  "scope": "resource",
-                  "value": [
-                    "nemo-guardrails"
-                  ],
-                  "valueType": "string"
-                },
-                {
-                  "id": "span-name",
-                  "tag": "name",
-                  "operator": "=",
-                  "scope": "span",
-                  "value": [
-                    "POST /v1/chat/completions"
-                  ],
-                  "valueType": "string"
-                }
-              ],
-              "spss": 9999
-            }
-          ],
-          "options": {
-            "calculate": true,
-            "yAxis": {
-              "axisPlacement": "left",
-              "reverse": false
-            },
-            "rowsFrame": {
-              "layout": "auto"
-            },
-            "color": {
-              "mode": "scheme",
-              "fill": "dark-orange",
-              "scale": "exponential",
-              "exponent": 0.5,
-              "scheme": "Oranges",
-              "steps": 64,
-              "reverse": false
-            },
-            "cellGap": 1,
-            "filterValues": {
-              "le": 1e-9
-            },
-            "tooltip": {
-              "mode": "single",
-              "yHistogram": false,
-              "showColorScale": false
-            },
-            "legend": {
-              "show": true
-            },
-            "exemplars": {
-              "color": "rgba(255,0,255,0.7)"
-            },
-            "calculation": {
-              "xBuckets": {
-                "mode": "size"
-              },
-              "yBuckets": {
-                "mode": "size",
-                "value": "",
-                "scale": {
-                  "type": "linear"
-                }
-              }
-            }
-          },
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "hideFrom": {
-                  "tooltip": false,
-                  "viz": false,
-                  "legend": false
-                }
-              },
-              "fieldMinMax": false
-            },
-            "overrides": []
-          },
-          "pluginVersion": "10.4.12"
-        },
-        {
           "title": "Recent Requests",
           "description": "Click a Trace ID to view the full request lifecycle in Tempo",
           "type": "table",
-          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
+          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 6 },
           "fieldConfig": {
             "defaults": {},
             "overrides": [

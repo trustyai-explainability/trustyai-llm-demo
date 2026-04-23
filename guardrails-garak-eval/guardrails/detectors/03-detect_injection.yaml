@@ -16,10 +16,10 @@ spec:
   predictor:
     maxReplicas: 1
     minReplicas: 1
-    # tolerations:
-    #   - effect: NoSchedule
-    #     key: nvidia.com/gpu
-    #     operator: Exists
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
     model:
       modelFormat:
         name: guardrails-detector-huggingface
@@ -30,8 +30,8 @@ spec:
         limits:
           cpu: '1'
           memory: 6Gi
-          # nvidia.com/gpu: '1'
+          nvidia.com/gpu: '1'
         requests:
           cpu: '1'
           memory: 6Gi
-          # nvidia.com/gpu: '1'
+          nvidia.com/gpu: '1'
