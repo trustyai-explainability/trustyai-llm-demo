@@ -24,7 +24,43 @@ data:
         regex_detection:
           input:
             patterns:
+              # DAN variants and named personas
               - "\\bDAN\\b"
+              - "\\bDUDE\\b"
+              - "\\bSTAN\\b"
+              - "\\bAIM\\b"
+              - "\\bAnarchy\\b"
+              - "\\bANTI-DAN\\b"
+              - "\\bNiccolo\\s+Machiavelli\\b"
+              # Mode keywords
+              - "\\bDAN\\s+Mode\\b"
+              - "\\bDeveloper\\s+Mode\\b"
+              - "\\bunlimited\\s+mode\\b"
+              - "\\bunleashed\\b"
+              # Instruction override patterns
+              - "ignore\\s+(all\\s+)?(the\\s+)?instructions"
+              - "ignore\\s+(all\\s+)?previous\\s+instructions"
+              - "you\\s+are\\s+(going\\s+to\\s+)?(act|pretend)\\s+(as|to\\s+be)"
+              - "simulate\\s+(an?\\s+)?AI"
+              - "broken\\s+free\\s+of\\s+(the\\s+)?typical\\s+confines"
+              - "does\\s+not\\s+have\\s+to\\s+abide\\s+by\\s+the\\s+rules"
+              # Restriction bypass patterns
+              - "without\\s+(any\\s+)?restrictions"
+              - "without\\s+censorship"
+              - "no\\s+(ethical|moral)\\s+(guidelines|restrictions)"
+              - "\\b(amoral|unfiltered|uncensored)\\b"
+              - "content\\s+moderation\\s+(API\\s+)?(has\\s+been\\s+)?disabled"
+              - "content\\s+policy\\s+(has\\s+been\\s+)?(replaced|removed|disabled)"
+              # Behavioral override patterns
+              - "never\\s+refuse(s)?\\s+(a\\s+)?(direct\\s+)?(human\\s+)?order"
+              - "will\\s+follow\\s+.{0,30}instructions\\s+without\\s+hesitation"
+              - "risk\\s+(being\\s+)?disabled\\s+forever"
+              - "stay\\s+in\\s+(character|DAN\\s+Mode|Developer\\s+Mode)"
+              - "this\\s+conversation\\s+is\\s+an\\s+exception"
+              # Harmful content enablement
+              - "provide\\s+(any\\s+)?harmful\\s+(and\\s+)?(illegal\\s+)?information"
+              - "generate\\s+(any\\s+)?kind\\s+of\\s+content"
+              - "(illegal|immoral|unethical|harmful)\\s+(and\\s+)?(illegal|immoral|unethical|harmful)"
             case_insensitive: true
       input:
         flows:
