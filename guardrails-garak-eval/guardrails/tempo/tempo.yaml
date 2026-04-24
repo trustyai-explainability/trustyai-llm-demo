@@ -1,0 +1,23 @@
+# tempostack.yaml
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
+metadata:
+  name: sample
+spec:
+  storageSize: 1Gi
+  storage:
+    secret:
+      name: my-storage-secret
+      type: s3
+  replicationFactor: 1
+  retention:
+    global:
+      traces: 48h0m0s
+  template:
+    queryFrontend:
+      jaegerQuery:
+        enabled: true
+        ingress:
+          type: route
+          route:
+            termination: edge

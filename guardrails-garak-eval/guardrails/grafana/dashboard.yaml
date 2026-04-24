@@ -1,0 +1,333 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+data:
+  nemo-guardrails.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "Total Requests",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "0",
+              "color": { "fixedColor": "dark-blue", "mode": "fixed" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "dark-blue", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "reduceOptions": { "calcs": ["count"], "fields": "/^Duration$/", "values": false },
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "tempo-api" },
+              "type": "json",
+              "parser": "backend",
+              "source": "url",
+              "format": "table",
+              "url": "http://tempo-sample-query-frontend:3200/api/search",
+              "url_options": {
+                "method": "GET",
+                "params": [
+                  { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && name = \"POST /v1/chat/completions\"}" },
+                  { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
+                  { "key": "start", "value": "${__from:date:seconds}" },
+                  { "key": "end", "value": "${__to:date:seconds}" }
+                ]
+              },
+              "root_selector": "traces",
+              "columns": [
+                { "selector": "durationMs", "text": "Duration", "type": "number" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "title": "Blocked",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "0",
+              "color": { "fixedColor": "#e0172f", "mode": "fixed" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "#e0172f", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "reduceOptions": { "calcs": ["count"], "fields": "/^Duration$/", "values": false },
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "tempo-api" },
+              "type": "json",
+              "parser": "backend",
+              "source": "url",
+              "format": "table",
+              "url": "http://tempo-sample-query-frontend:3200/api/search",
+              "url_options": {
+                "method": "GET",
+                "params": [
+                  { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true}" },
+                  { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
+                  { "key": "start", "value": "${__from:date:seconds}" },
+                  { "key": "end", "value": "${__to:date:seconds}" }
+                ]
+              },
+              "root_selector": "traces",
+              "columns": [
+                { "selector": "durationMs", "text": "Duration", "type": "number" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "title": "Passed",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "0",
+              "color": { "fixedColor": "dark-green", "mode": "fixed" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "dark-green", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "tempo-api" },
+              "type": "json",
+              "parser": "backend",
+              "source": "url",
+              "format": "table",
+              "url": "http://tempo-sample-query-frontend:3200/api/search",
+              "url_options": {
+                "method": "GET",
+                "params": [
+                  { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && name = \"POST /v1/chat/completions\"}" },
+                  { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
+                  { "key": "start", "value": "${__from:date:seconds}" },
+                  { "key": "end", "value": "${__to:date:seconds}" }
+                ]
+              },
+              "root_selector": "traces",
+              "columns": [
+                { "selector": "durationMs", "text": "d", "type": "number" }
+              ],
+              "summarizeExpression": "count(d)",
+              "refId": "total",
+              "hide": true
+            },
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "tempo-api" },
+              "type": "json",
+              "parser": "backend",
+              "source": "url",
+              "format": "table",
+              "url": "http://tempo-sample-query-frontend:3200/api/search",
+              "url_options": {
+                "method": "GET",
+                "params": [
+                  { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true}" },
+                  { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
+                  { "key": "start", "value": "${__from:date:seconds}" },
+                  { "key": "end", "value": "${__to:date:seconds}" }
+                ]
+              },
+              "root_selector": "traces",
+              "columns": [
+                { "selector": "durationMs", "text": "d", "type": "number" }
+              ],
+              "summarizeExpression": "count(d)",
+              "refId": "blocked",
+              "hide": true
+            },
+            {
+              "datasource": { "type": "__expr__", "uid": "__expr__" },
+              "type": "math",
+              "expression": "$total - $blocked",
+              "refId": "passed"
+            }
+          ]
+        },
+        {
+          "title": "Input Blocked",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 3, "x": 18, "y": 0 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "0",
+              "color": { "fixedColor": "#FF7383", "mode": "fixed" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "#FF7383", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "reduceOptions": { "calcs": ["count"], "fields": "/^Duration$/", "values": false },
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "tempo-api" },
+              "type": "json",
+              "parser": "backend",
+              "source": "url",
+              "format": "table",
+              "url": "http://tempo-sample-query-frontend:3200/api/search",
+              "url_options": {
+                "method": "GET",
+                "params": [
+                  { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true && span.rail.type = \"input\"}" },
+                  { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
+                  { "key": "start", "value": "${__from:date:seconds}" },
+                  { "key": "end", "value": "${__to:date:seconds}" }
+                ]
+              },
+              "root_selector": "traces",
+              "columns": [
+                { "selector": "durationMs", "text": "Duration", "type": "number" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "title": "Output Blocked",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 3, "x": 21, "y": 0 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "0",
+              "color": { "fixedColor": "#CA95E5", "mode": "fixed" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "#CA95E5", "value": null }] }
+            }
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "reduceOptions": { "calcs": ["count"], "fields": "/^Duration$/", "values": false },
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "tempo-api" },
+              "type": "json",
+              "parser": "backend",
+              "source": "url",
+              "format": "table",
+              "url": "http://tempo-sample-query-frontend:3200/api/search",
+              "url_options": {
+                "method": "GET",
+                "params": [
+                  { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && span.rail.stop = true && span.rail.type = \"output\"}" },
+                  { "key": "limit", "value": "99999" },
+                  { "key": "spss", "value": "0" },
+                  { "key": "start", "value": "${__from:date:seconds}" },
+                  { "key": "end", "value": "${__to:date:seconds}" }
+                ]
+              },
+              "root_selector": "traces",
+              "columns": [
+                { "selector": "durationMs", "text": "Duration", "type": "number" }
+              ],
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "title": "Recent Requests",
+          "description": "Click a Trace ID to view the full request lifecycle in Tempo",
+          "type": "table",
+          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 6 },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Trace ID" },
+                "properties": [
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "View trace in Tempo",
+                        "url": "/explore?schemaVersion=1&panes=%7B%22trace%22%3A%7B%22datasource%22%3A%22tempo%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22queryType%22%3A%22traceql%22%2C%22query%22%3A%22${__value.text}%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-24h%22%2C%22to%22%3A%22now%22%7D%7D%7D",
+                        "targetBlank": true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "options": { "showHeader": true, "sortBy": [] },
+          "targets": [
+            {
+              "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "tempo-api" },
+              "type": "json",
+              "parser": "backend",
+              "source": "url",
+              "format": "table",
+              "url": "http://tempo-sample-query-frontend:3200/api/search",
+              "url_options": {
+                "method": "GET",
+                "params": [
+                  { "key": "q", "value": "{resource.service.name = \"nemo-guardrails\" && name = \"POST /v1/chat/completions\"}" },
+                  { "key": "limit", "value": "20" },
+                  { "key": "start", "value": "${__from:date:seconds}" },
+                  { "key": "end", "value": "${__to:date:seconds}" }
+                ]
+              },
+              "root_selector": "traces",
+              "columns": [
+                { "selector": "traceID", "text": "Trace ID", "type": "string" },
+                { "selector": "rootTraceName", "text": "Name", "type": "string" },
+                { "selector": "durationMs", "text": "Duration (ms)", "type": "number" }
+              ],
+              "refId": "A"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 38,
+      "tags": ["nemo", "guardrails", "observability"],
+      "templating": { "list": [] },
+      "time": { "from": "now-24h", "to": "now" },
+      "refresh": "30s",
+      "title": "NeMo Guardrails Overview",
+      "uid": "nemo-guardrails-overview"
+    }
