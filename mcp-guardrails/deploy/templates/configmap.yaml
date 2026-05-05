@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: trustyai
+data:
+  config.yaml: |
+    models:
+      - type: main
+        engine: openai
+        model: dummy
+    rails:
+      config:
+        sensitive_data_detection:
+          input:
+            entities:
+              - PERSON
+              - EMAIL_ADDRESS
+              - PHONE_NUMBER
+              - CREDIT_CARD
+              - US_SSN
+              - IBAN_CODE
+      input:
+        flows:
+          - detect sensitive data on input
+      tool_input:
+        flows:
+          - detect sensitive data on tool input
+  rails.co: |
+    define flow detect sensitive data on tool input
+      """Check if the tool input has any sensitive data."""
+      $has_sensitive_data = execute detect_sensitive_data(source="input", text=$tool_message)
+
+      if $has_sensitive_data
+        bot inform answer unknown
+        stop
+
+

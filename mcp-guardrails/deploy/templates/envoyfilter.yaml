@@ -1,0 +1,58 @@
+{{- if .Values.envoyFilter.enabled }}
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: {{ .Release.Name }}-mcp-sse-strip
+  namespace: {{ .Values.envoyFilter.gatewayNamespace }}
+  labels:
+    app: {{ .Release.Name }}
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: trustyai
+spec:
+  workloadSelector:
+    labels:
+      gateway.networking.k8s.io/gateway-name: {{ .Values.envoyFilter.gatewayName }}
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: ANY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.ext_proc.bbr
+      patch:
+        operation: INSERT_AFTER
+        value:
+          name: envoy.filters.http.lua
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            default_source_code:
+              inline_string: |
+                function envoy_on_response(response_handle)
+                  local ct = response_handle:headers():get("content-type") or ""
+                  if not ct:find("text/event%-stream") then
+                    return
+                  end
+
+                  local body = response_handle:body()
+                  local raw = body:getBytes(0, body:length())
+
+                  local json_payload = nil
+                  for line in raw:gmatch("[^\r\n]+") do
+                    local data = line:match("^data:%s*(.+)")
+                    if data then
+                      json_payload = data
+                    end
+                  end
+
+                  if json_payload then
+                    body:setBytes(json_payload)
+                    response_handle:headers():replace("content-type", "application/json")
+                    response_handle:headers():replace("content-length", tostring(#json_payload))
+                    response_handle:headers():remove("transfer-encoding")
+                  end
+                end
+{{- end }}

@@ -1,0 +1,23 @@
+replicaCount: 1
+
+image:
+  repository: quay.io/trustyai/nemo-guardrails-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+env:
+  - name: LOG_LEVEL
+    value: "DEBUG"
+  - name: OPENAI_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: "api-token-secret"
+        key: "token"
+
+route:
+  enabled: false
+
+envoyFilter:
+  enabled: false
+  gatewayNamespace: gateway-system
+  gatewayName: mcp-gateway
