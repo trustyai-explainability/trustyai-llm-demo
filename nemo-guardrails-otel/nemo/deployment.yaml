@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nemo-guardrails
+  namespace: trustyai-guardrails
+  labels:
+    app: nemo-guardrails
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nemo-guardrails
+  template:
+    metadata:
+      labels:
+        app: nemo-guardrails
+    spec:
+      containers:
+        - name: nemo-guardrails
+          image: quay.io/trustyai/nemo-guardrails:latest  # CHANGEME
+          ports:
+            - containerPort: 8000
+          env:
+            - name: CONFIG_ID
+              value: nemo-config
+            - name: PORT
+              value: "8000"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "https://tempo-sample-distributor.trustyai-guardrails.svc.cluster.local:4317"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_EXPORTER_OTLP_CERTIFICATE
+              value: "/certs/service-ca.crt"
+            - name: OTEL_SERVICE_NAME
+              value: "nemo-guardrails"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config/nemo-config
+              readOnly: true
+            - name: ca-bundle
+              mountPath: /certs
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: nemo-config
+        - name: ca-bundle
+          configMap:
+            name: tempo-ca-bundle

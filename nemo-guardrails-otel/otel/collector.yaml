@@ -1,0 +1,36 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: my-otelcol
+  namespace: trustyai-guardrails
+spec:
+  config:
+    exporters:
+      debug: {}
+      otlp:
+        endpoint: "tempo-sample-distributor.trustyai-guardrails.svc.cluster.local:4317"
+        tls:
+          ca_file: /certs/service-ca.crt
+    receivers:
+      otlp:
+        protocols:
+          grpc: {}
+          http: {}
+    service:
+      pipelines:
+        traces:
+          exporters:
+            - debug
+            - otlp
+          receivers:
+            - otlp
+  volumeMounts:
+    - name: ca-bundle
+      mountPath: /certs
+      readOnly: true
+  volumes:
+    - name: ca-bundle
+      configMap:
+        name: tempo-ca-bundle
+  mode: deployment
+  resources: {}

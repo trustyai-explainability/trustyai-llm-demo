@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-ca-bundle
+  namespace: trustyai-guardrails
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"

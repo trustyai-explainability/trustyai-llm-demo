@@ -1,0 +1,63 @@
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
+metadata:
+  name: sample
+  namespace: trustyai-guardrails
+spec:
+  managementState: Managed
+  replicationFactor: 1
+  storage:
+    secret:
+      name: my-storage-secret
+      type: s3
+    tls:
+      enabled: true
+      caName: tempo-ca-bundle
+  storageSize: 1Gi
+  retention:
+    global:
+      traces: 48h0m0s
+  template:
+    distributor:
+      component:
+        podSecurityContext: {}
+        replicas: 1
+      tls:
+        enabled: true
+    ingester:
+      podSecurityContext: {}
+      replicas: 1
+    compactor:
+      podSecurityContext: {}
+      replicas: 1
+    querier:
+      podSecurityContext: {}
+      replicas: 1
+    queryFrontend:
+      component:
+        podSecurityContext: {}
+        replicas: 1
+      jaegerQuery:
+        enabled: true
+        authentication:
+          enabled: true
+          sar: '{"namespace": "trustyai-guardrails", "resource": "pods", "verb": "get"}'
+        ingress:
+          type: route
+          route:
+            termination: edge
+        servicesQueryDuration: 72h0m0s
+    gateway:
+      component:
+        podSecurityContext: {}
+        replicas: 1
+      enabled: false
+  resources: {}
+  search:
+    defaultResultLimit: 20
+  observability:
+    metrics: {}
+    tracing:
+      jaeger_agent_endpoint: localhost:6831
+  networkPolicy:
+    enabled: true
