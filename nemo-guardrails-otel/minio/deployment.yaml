@@ -66,3 +66,47 @@ spec:
                 path: public.crt
               - key: tls.key
                 path: private.key
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-tempo-bucket
+  namespace: trustyai-guardrails
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: minio/mc:latest
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: my-storage-secret
+                  key: access_key_id
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: my-storage-secret
+                  key: access_key_secret
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /.mc/certs/CAs
+              readOnly: true
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until mc alias set minio https://minio.trustyai-guardrails.svc.cluster.local:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
+                echo "Waiting for MinIO..."
+                sleep 2
+              done
+              mc mb --ignore-existing minio/tempo
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: minio-tls
+            items:
+              - key: tls.crt
+                path: public.crt

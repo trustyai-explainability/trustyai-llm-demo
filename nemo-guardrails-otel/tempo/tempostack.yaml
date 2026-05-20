@@ -6,6 +6,7 @@ metadata:
 spec:
   managementState: Managed
   replicationFactor: 1
+  # S3 storage configuration
   storage:
     secret:
       name: my-storage-secret
@@ -14,9 +15,11 @@ spec:
       enabled: true
       caName: tempo-ca-bundle
   storageSize: 1Gi
+  # Trace retention
   retention:
     global:
-      traces: 48h0m0s
+      traces: 48h0m0s # We keep traces for 48 hours
+  # Configure Tempo components
   template:
     distributor:
       component:
