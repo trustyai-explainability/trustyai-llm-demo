@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: quay.io/trustyai/nemo-guardrails-server
+  repository: quay.io/rgeada/nemo-debug
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 env:
   - name: LOG_LEVEL
