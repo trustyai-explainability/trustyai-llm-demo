@@ -105,6 +105,29 @@ How opting in works:
   If you skipped this step, also remove the `experiment=` argument from the
   job submissions in the notebooks.
 
+### ⚠️ A note on network exposure
+
+The MinIO and MLflow manifests create OpenShift **Routes**, which on most
+clusters are reachable from the public internet. EvalHub's route requires an
+OpenShift bearer token, but **MinIO is only protected by the static demo
+credentials in its manifest, and MLflow has no authentication at all** —
+anyone who discovers the hostnames can read the test datasets and evaluation
+results.
+
+This is acceptable for a demo with synthetic data, but **do not put real
+data through this setup as-is**. For anything beyond a demo:
+
+- delete the routes and access the services from inside the cluster (an
+  RHOAI workbench reaches them via service DNS, e.g.
+  `http://mlflow.evalhub.svc.cluster.local:5000`) or via
+  `oc port-forward svc/mlflow 5000:5000 -n evalhub`, and/or
+- put an [oauth-proxy](https://github.com/openshift/oauth-proxy) in front of
+  the routes, change the MinIO credentials, and use persistent storage.
+
+The notebooks auto-discover the route URLs but work equally well with
+in-cluster URLs — set the `S3_ENDPOINT` and `MLFLOW_URL` environment
+variables.
+
 ### Smoke test
 
 ```sh
