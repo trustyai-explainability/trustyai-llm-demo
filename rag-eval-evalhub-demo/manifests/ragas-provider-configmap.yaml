@@ -8,9 +8,9 @@
 #
 # IMPORTANT: update runtime.k8s.image to point at an adapter image your
 # cluster can pull. The adapter sources live in the eval-hub-contrib repo
-# (https://github.com/trustyai-explainability/eval-hub-contrib, adapters/ragas).
+# (https://github.com/eval-hub/eval-hub-contrib, adapters/ragas).
 # To build one on-cluster into the internal registry:
-#   git clone https://github.com/trustyai-explainability/eval-hub-contrib
+#   git clone https://github.com/eval-hub/eval-hub-contrib
 #   oc new-build --name ragas-adapter --strategy docker --binary -n evalhub
 #   oc patch bc ragas-adapter -n evalhub --type merge \
 #     -p '{"spec":{"strategy":{"dockerStrategy":{"dockerfilePath":"Containerfile"}}}}'

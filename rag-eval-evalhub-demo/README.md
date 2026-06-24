@@ -4,7 +4,7 @@ Hands-on companion to the evaluation plan described in
 [`rag-eval-getting-started.md`](rag-eval-getting-started.md):
 evaluate a RAG chatbot in two stages, using RAGAS running on EvalHub
 (TrustyAI's central API for AI evaluations). The RAGAS adapter itself lives in
-[eval-hub-contrib](https://github.com/trustyai-explainability/eval-hub-contrib/tree/main/adapters/ragas).
+[eval-hub-contrib](https://github.com/eval-hub/eval-hub-contrib/tree/main/adapters/ragas).
 
 | Notebook | Stage | What it measures |
 |----------|-------|------------------|
