@@ -5,6 +5,7 @@
 ## 👩‍🔬 Evaluation Demos 📊
 * [Evaluation Quickstart](./eval-quickstart-demo/README.md): This demo will quickly get you started running an evaluation against a deployed model.
 * [Garak Quickstart](./garak-quickstart-demo/README.md): Run Garak security scans on Kubeflow Pipelines to test LLMs for vulnerabilities.
+* [RAG Evaluation with RAGAS on EvalHub](./rag-eval-evalhub-demo/README.md): A two-stage plan for evaluating a RAG chatbot — answer correctness first, then retrieval diagnostics — with notebooks that run RAGAS through EvalHub.
 
 
 ## 💂🏿‍♀️ Guardrail Demos 🛡️

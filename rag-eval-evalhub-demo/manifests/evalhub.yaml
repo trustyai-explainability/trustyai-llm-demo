@@ -1,0 +1,36 @@
+# EvalHub instance managed by the TrustyAI operator.
+#
+# Prerequisites:
+#   - Red Hat OpenShift AI (or ODH) with the TrustyAI component set to "Managed"
+#     in the DataScienceCluster.
+#   - The ragas provider ConfigMap applied in the operator namespace
+#     (see ragas-provider-configmap.yaml).
+#
+# Apply with:
+#   oc new-project evalhub
+#   oc label namespace evalhub evalhub.trustyai.opendatahub.io/tenant=true
+#   oc apply -f evalhub.yaml
+#
+# The tenant label is required: evaluation jobs run in tenant-labelled
+# namespaces, and API requests carry the namespace in the X-Tenant header.
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: EvalHub
+metadata:
+  name: evalhub
+  namespace: evalhub
+spec:
+  replicas: 1
+  # sqlite is fine for evaluation/PoC use; switch to postgresql (with a
+  # secret reference) for production deployments.
+  database:
+    type: sqlite
+  providers:
+    - ragas
+  env:
+    - name: LOG_LEVEL
+      value: "INFO"
+    # Optional: point EvalHub at an MLflow tracking server (see mlflow.yaml).
+    # Jobs that carry an `experiment` config will log metrics and per-row
+    # results to MLflow. Remove this if you don't use MLflow.
+    - name: MLFLOW_TRACKING_URI
+      value: "http://mlflow.evalhub.svc.cluster.local:5000"

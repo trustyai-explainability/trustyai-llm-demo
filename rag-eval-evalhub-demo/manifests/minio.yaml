@@ -1,0 +1,87 @@
+# MinIO: a lightweight S3-compatible object store used to hand custom test
+# datasets to evaluation jobs (EvalHub downloads them via an init container).
+#
+# This is a demo-grade deployment (emptyDir storage, static credentials).
+# If you already have S3-compatible storage (ODF, AWS S3, MinIO), skip this
+# and just create the evalhub-test-data-s3 secret pointing at it.
+#
+# Apply with:
+#   oc apply -n evalhub -f minio.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  labels:
+    app: minio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: quay.io/minio/minio:latest
+          args: ["server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              value: minio
+            - name: MINIO_ROOT_PASSWORD
+              value: minio12345
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+spec:
+  selector:
+    app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+---
+# External route so notebooks/scripts outside the cluster can upload datasets.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: minio
+spec:
+  to:
+    kind: Service
+    name: minio
+  port:
+    targetPort: api
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+# Credentials the evaluation job's init container uses to download test data.
+# Referenced from job submissions as test_data_ref.s3.secret_ref.
+# AWS_S3_ENDPOINT must be reachable from inside the cluster.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: evalhub-test-data-s3
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: minio
+  AWS_SECRET_ACCESS_KEY: minio12345
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_S3_ENDPOINT: http://minio.evalhub.svc.cluster.local:9000

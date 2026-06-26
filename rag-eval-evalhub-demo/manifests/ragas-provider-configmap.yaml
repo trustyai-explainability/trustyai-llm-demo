@@ -1,0 +1,131 @@
+# Registers the RAGAS provider with the TrustyAI operator so it can be
+# mounted into EvalHub deployments via `spec.providers: [ragas]`.
+#
+# The operator discovers provider ConfigMaps in its own namespace
+# (redhat-ods-applications on RHOAI, opendatahub on ODH) by these labels:
+#   trustyai.opendatahub.io/evalhub-provider-type=system
+#   trustyai.opendatahub.io/evalhub-provider-name=<name>
+#
+# IMPORTANT: update runtime.k8s.image to point at an adapter image your
+# cluster can pull. The adapter sources live in the eval-hub-contrib repo
+# (https://github.com/eval-hub/eval-hub-contrib, adapters/ragas).
+# To build one on-cluster into the internal registry:
+#   git clone https://github.com/eval-hub/eval-hub-contrib
+#   oc new-build --name ragas-adapter --strategy docker --binary -n evalhub
+#   oc patch bc ragas-adapter -n evalhub --type merge \
+#     -p '{"spec":{"strategy":{"dockerStrategy":{"dockerfilePath":"Containerfile"}}}}'
+#   oc start-build ragas-adapter -n evalhub \
+#     --from-dir eval-hub-contrib/adapters/ragas --follow
+#
+# Apply with:
+#   oc apply -f ragas-provider-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evalhub-provider-ragas
+  namespace: redhat-ods-applications
+  labels:
+    trustyai.opendatahub.io/evalhub-provider-type: system
+    trustyai.opendatahub.io/evalhub-provider-name: ragas
+data:
+  ragas.yaml: |
+    id: ragas
+    name: RAGAS
+    description: "Retrieval Augmented Generation Assessment \u2014 evaluates RAG pipeline quality\
+      \ using metrics like faithfulness, answer relevancy, context precision/recall, and more.\
+      \ Models are accessed via OpenAI-compatible endpoints.\n"
+    type: builtin
+    runtime:
+      k8s:
+        image: image-registry.openshift-image-registry.svc:5000/evalhub/ragas-adapter:latest
+        entrypoint:
+        - python
+        - main.py
+        cpu_request: 100m
+        memory_request: 128Mi
+        cpu_limit: 1000m
+        memory_limit: 2Gi
+      local:
+        command: 'true'
+    benchmarks:
+    - id: ragas_rag_default
+      name: RAG Default Suite
+      description: Default RAG evaluation with answer relevancy, context precision, faithfulness,
+        and context recall
+      category: rag_evaluation
+      metrics:
+      - answer_relevancy
+      - context_precision
+      - faithfulness
+      - context_recall
+      tags:
+      - ragas
+      - rag
+      - default
+      primary_score:
+        metric: faithfulness
+        lower_is_better: false
+      pass_criteria:
+        threshold: 0.5
+    - id: ragas_rag_full
+      name: RAG Full Suite
+      description: Comprehensive RAG evaluation with all available RAGAS metrics
+      category: rag_evaluation
+      metrics:
+      - answer_relevancy
+      - answer_similarity
+      - context_precision
+      - faithfulness
+      - context_recall
+      - context_entity_recall
+      - nv_accuracy
+      - nv_context_relevance
+      - factual_correctness
+      - noise_sensitivity
+      - nv_response_groundedness
+      tags:
+      - ragas
+      - rag
+      - comprehensive
+      primary_score:
+        metric: faithfulness
+        lower_is_better: false
+      pass_criteria:
+        threshold: 0.5
+    parameters:
+    - name: metrics
+      type: array
+      default: null
+      description: 'List of RAGAS metric names to evaluate. Available: answer_relevancy, answer_similarity,
+        context_precision, faithfulness, context_recall, context_entity_recall, nv_accuracy, nv_context_relevance,
+        factual_correctness, noise_sensitivity, nv_response_groundedness. Defaults to the benchmark''s
+        metric list.
+
+        '
+    - name: embedding_model
+      type: string
+      default: null
+      description: Model name for embeddings (defaults to the same model as LLM)
+    - name: embedding_url
+      type: string
+      default: null
+      description: Base URL for embeddings endpoint (defaults to model URL)
+    - name: max_tokens
+      type: integer
+      default: null
+      description: Maximum tokens for LLM completions
+    - name: temperature
+      type: number
+      default: null
+      description: Sampling temperature for LLM completions
+    - name: column_map
+      type: object
+      default: null
+      description: 'Mapping from dataset column names to RAGAS expected names (user_input, response,
+        retrieved_contexts, reference)
+
+        '
+    - name: data_path
+      type: string
+      default: null
+      description: Explicit path to dataset file (overrides default /test_data and /data resolution)
