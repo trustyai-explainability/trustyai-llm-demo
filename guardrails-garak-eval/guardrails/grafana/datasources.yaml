@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+data:
+  tempo.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo-sample-query-frontend:3200
+        isDefault: false
+        jsonData:
+          httpMethod: GET
+          search:
+            hide: false
+          nodeGraph:
+            enabled: true
+          traceQuery:
+            timeShiftEnabled: true
+            spanStartTimeShift: "-30m"
+            spanEndTimeShift: "30m"
+      - name: Tempo API
+        uid: tempo-api
+        type: yesoreyeram-infinity-datasource
+        access: proxy
+        isDefault: true
+        jsonData:
+          datasource_mode: "advanced"
+        secureJsonData: {}

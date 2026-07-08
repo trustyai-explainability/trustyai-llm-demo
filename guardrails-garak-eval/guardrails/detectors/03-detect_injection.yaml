@@ -1,0 +1,37 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: detector-prompt
+  labels:
+    opendatahub.io/dashboard: 'true'
+    trustyai/guardrails: 'true'
+  annotations:
+    openshift.io/display-name: detector-prompt
+    serving.knative.openshift.io/enablePassthrough: 'true'
+    sidecar.istio.io/inject: 'true'
+    sidecar.istio.io/rewriteAppHTTPProbers: 'true'
+    serving.kserve.io/deploymentMode: RawDeployment
+    security.opendatahub.io/enable-auth: 'false'
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+    model:
+      modelFormat:
+        name: guardrails-detector-huggingface
+      name: ''
+      runtime: guardrails-detector-runtime
+      storageUri: hf://devndeploy/bert-prompt-injection-detector
+      resources:
+        limits:
+          cpu: '1'
+          memory: 6Gi
+          nvidia.com/gpu: '1'
+        requests:
+          cpu: '1'
+          memory: 6Gi
+          nvidia.com/gpu: '1'

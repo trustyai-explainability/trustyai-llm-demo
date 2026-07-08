@@ -1,0 +1,101 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-runtime
+  annotations:
+    openshift.io/display-name: vLLM ServingRuntime for KServe
+    opendatahub.io/template-display-name: vLLM ServingRuntime for KServe
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+  labels:
+    opendatahub.io/dashboard: 'true'
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: '8080'
+    openshift.io/display-name: vLLM ServingRuntime for KServe
+  labels:
+    opendatahub.io/dashboard: 'true'
+  containers:
+    - args:
+        - '--port=8080'
+        - '--model=/mnt/models'
+        - '--served-model-name={{.Name}}'
+        - '--dtype=float16'
+        - '--enforce-eager'
+        - '--max-model-len=4096'
+        - '--gpu-memory-utilization=0.95'
+      command:
+        - python
+        - '-m'
+        - vllm.entrypoints.openai.api_server
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: HOME
+          value: /tmp
+      image: 'quay.io/vllm/automation-vllm:cuda-24745077015'
+      # image: 'quay.io/rh-aiservices-bu/vllm-cpu-openai-ubi9@sha256:d680ff8becb6bbaf83dfee7b2d9b8a2beb130db7fd5aa7f9a6d8286a58cebbfd'
+      name: kserve-container
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM
+  volumes:
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 2Gi
+      name: shm
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: llm
+  labels:
+    opendatahub.io/dashboard: 'true'
+  annotations:
+    openshift.io/display-name: llm
+    security.opendatahub.io/enable-auth: 'false'
+    serving.knative.openshift.io/enablePassthrough: 'true'
+    serving.kserve.io/deploymentMode: RawDeployment
+    sidecar.istio.io/inject: 'true'
+    sidecar.istio.io/rewriteAppHTTPProbers: 'true'
+spec:
+  predictor:
+    nodeSelector:
+      nvidia.com/gpu.product: NVIDIA-A10G
+    maxReplicas: 1
+    minReplicas: 1
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+    model:
+      modelFormat:
+        name: vLLM
+      name: ''
+      resources:
+        limits:
+          # cpu: '1'
+          # memory: 8Gi
+          nvidia.com/gpu: '1'
+        requests:
+          # cpu: '1'
+          # memory: 8Gi
+          nvidia.com/gpu: '1'
+      runtime: vllm-runtime
+      storageUri: hf://nvidia/Llama-3.1-Nemotron-Safety-Guard-8B-v3
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: llm-route
+spec:
+  to:
+    kind: Service
+    name: llm-predictor

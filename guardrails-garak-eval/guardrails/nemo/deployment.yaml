@@ -1,0 +1,59 @@
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: NemoGuardrails
+metadata:
+  name: nemo
+spec:
+  replicas: 1
+  nemoConfigs:
+    - name: lightweight-external
+      configMaps:
+        - config-lightweight-external
+    - name: self-check-external
+      configMaps:
+        - config-self-check-external
+    - name: self-check-internal
+      default: true
+      configMaps:
+        - config-self-check-internal
+  env:
+    - name: LLM_API_BASE
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: api-base
+    - name: LLM_MODEL_NAME
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: model-name
+    - name: LLM_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: api-key
+    - name: GUARD_API_BASE
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: guard-api-base
+    - name: GUARD_MODEL_NAME
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: guard-model-name
+    - name: GUARD_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: guard-api-key  
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: llm-secret
+          key: tempo-endpoint
+    - name: OTEL_SERVICE_NAME
+      value: "nemo-guardrails"
+    - name: OTEL_EXPORTER_OTLP_PROTOCOL
+      value: "grpc"
+    - name: OTEL_METRICS_EXPORTER
+      value: "none"
