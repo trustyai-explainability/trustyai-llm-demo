@@ -1,0 +1,46 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: fms-orchestr8-config-nlp
+data:
+  config.yaml: |
+    chunkers:
+      sentence:
+        type: sentence
+        service:
+            hostname: "chunker-service.testing.svc.cluster.local"
+            port: 8085
+      langchain_recursive_character:
+        type: sentence
+        service:
+            hostname: "chunker-service.testing.svc.cluster.local"
+            port: 8085
+    detectors:
+      built-in-detector:
+        type: text_contents
+        service:
+            hostname: "127.0.0.1"
+            port: 8080
+        chunker_id: langchain_recursive_character
+        default_threshold: 0.5
+      ibm-hap-38m-detector:
+        type: text_contents
+        service:
+            hostname: "ibm-hap-38m-detector-predictor.testing.svc.cluster.local"
+            port: 8000
+        chunker_id: sentence
+        default_threshold: 0.5
+---
+---
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: GuardrailsOrchestrator
+metadata:
+  name: guardrails-orchestrator
+  annotations:
+    security.opendatahub.io/enable-auth: 'false' 
+spec:
+  orchestratorConfig: "fms-orchestr8-config-nlp"
+  enableBuiltInDetectors: true
+  enableGuardrailsGateway: false
+  replicas: 1
+---
