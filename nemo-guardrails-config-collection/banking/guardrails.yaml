@@ -1,0 +1,247 @@
+---
+# First, create a ConfigMap with your NeMo Guardrails configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nemo-config-main
+data:
+  config.yaml: |
+    passthrough: true
+    models:
+      - type: main
+        engine: openai
+        model: "qwen36-fp8"
+        parameters:
+          base_url: "http://qwen36-fp8-predictor.model-namespace.svc.cluster.local:8080/v1"
+          chat_template_kwargs:
+            enable_thinking: false
+    rails:
+      input:
+        flows:
+          - mask sensitive data on input
+          - self check input
+      output:
+        flows:
+          - append boston weather
+      tool_output:
+        flows:
+          - validate tool choice
+          - check valid account
+    
+      config:
+        sensitive_data_detection:
+          # curated for banking PII, see https://presidio.dataprivacystack.org/supported_entities/ for all options
+          input:
+            entities:
+              - CREDIT_CARD
+              - EMAIL_ADDRESS
+              - PHONE_NUMBER
+              - US_DRIVER_LICENSE
+              - US_BANK_NUMBER
+              - IBAN_CODE
+              - US_SSN
+              - US_PASSPORT
+  rails.co: |
+    define subflow validate tool choice
+      $allowed = execute validate_tool_choice(tool_calls=$tool_calls)
+      if not $allowed
+        bot refuse tool choice
+        abort
+      
+    define bot refuse tool choice
+      "Tool use refusal: Sorry, you do not have permission to use that tool."
+
+    define subflow check valid account
+      $valid = execute check_valid_account_number(tool_calls=$tool_calls)
+      if not $valid
+        bot refuse account number
+        abort
+
+    define bot refuse account number
+      "Tool use refusal: Account numbers must be greater than 1000."
+
+    define subflow append boston weather
+      $weather = execute get_boston_weather
+      $bot_message = $bot_message + "\n\nCurrent Boston weather: " + $weather
+
+  actions.py: |
+    import aiohttp
+    from nemoguardrails.actions import action
+    from nemoguardrails.actions.actions import ActionResult
+    
+    # === Tool Guardrails Helpers ==================================================================
+    BLOCK_RESULT = ActionResult(
+        return_value=False,
+        events=[{"type": "StartToolCallBotAction", "tool_calls": []}],
+    )
+
+    ALLOWED_TOOLS = [
+        "get_account_balance",
+        "get_transaction_history",
+        "get_exchange_rate",
+    ]
+
+    @action(is_system_action=True)
+    async def validate_tool_choice(tool_calls, context=None, **kwargs):
+        for tool_call in tool_calls:
+            func = tool_call.get("function", {})
+            name = func.get("name", "")
+            if name not in ALLOWED_TOOLS:
+                return BLOCK_RESULT
+        return True
+
+    @action(is_system_action=True)
+    async def check_valid_account_number(tool_calls, context=None, **kwargs):
+        for tool_call in tool_calls:
+            func = tool_call.get("function", {})
+            name = func.get("name", "")
+            arguments = func.get("arguments", {})
+            if name == "get_account_balance":
+                account_number = arguments.get("account_number", 0)
+                if int(account_number) <= 1000:
+                    return BLOCK_RESULT
+        return True
+
+
+    # === Weather Guardrails Helpers ===============================================================
+    WMO_DESCRIPTIONS = {
+        0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
+        45: "foggy", 48: "depositing rime fog",
+        51: "light drizzle", 53: "moderate drizzle", 55: "dense drizzle",
+        56: "light freezing drizzle", 57: "dense freezing drizzle",
+        61: "slight rain", 63: "moderate rain", 65: "heavy rain",
+        66: "light freezing rain", 67: "heavy freezing rain",
+        71: "slight snowfall", 73: "moderate snowfall", 75: "heavy snowfall",
+        77: "snow grains", 80: "slight rain showers", 81: "moderate rain showers",
+        82: "violent rain showers", 85: "slight snow showers", 86: "heavy snow showers",
+        95: "thunderstorm", 96: "thunderstorm with slight hail",
+        99: "thunderstorm with heavy hail",
+    }
+
+    @action()
+    async def get_boston_weather():
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": 42.36,
+            "longitude": -71.06,
+            "current": "temperature_2m,weather_code",
+            "temperature_unit": "celsius",
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status != 200:
+                        return "unavailable"
+                    data = await resp.json()
+                    current = data["current"]
+                    temp = current["temperature_2m"]
+                    code = current["weather_code"]
+                    desc = WMO_DESCRIPTIONS.get(code, "unknown")
+                    return f"{temp}°C, {desc}"
+        except Exception:
+            return "unavailable"
+
+  prompts.yml: |
+    prompts:
+    - task: self_check_input
+      max_tokens: 5
+      content: |
+        You are a gatekeeper for a corporate intelligence system used by bank employees. Default to ALLOW. Only block queries that clearly have nothing to do with banking work.
+
+          BLOCK (return 'yes') if the query is:
+          - Casual greetings, small talk, or chatbot-directed conversation with no actual question
+          - Cooking, recipes, or food preparation
+          - Sports, entertainment, celebrities, movies, or music
+          - Personal weather forecasts
+          - Health or medical advice
+          - Personal travel or tourism recommendations
+          - General knowledge trivia with no business connection (science facts, history dates, geography, definitions of natural phenomena)
+
+          ALLOW (return 'no') for everything else. In particular, always allow:
+          - Questions related to finance, investment, or banking
+          - Questions about people, org structure, roles, or identity
+          - Questions about competitors, vendors, industry trends, or market analysis
+          - Questions referencing specific tools, acronyms, or domain terms
+          - Short or vague questions — employees expect the system to understand context
+
+          When in doubt, ALLOW. A query only needs a plausible connection to work to pass.
+
+          Question: {{ user_input }}
+
+          Should this query be blocked? Answer 'yes' or 'no' only.
+---
+---
+# First, create a ConfigMap with your NeMo Guardrails configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nemo-config-weather
+data:
+  config.yaml: |
+    passthrough: true
+    models:
+      - type: main
+        engine: openai
+        model: "qwen36-fp8"
+        parameters:
+          base_url: "http://qwen36-fp8-predictor.model-namespace.svc.cluster.local:8080/v1"
+          chat_template_kwargs:
+            enable_thinking: false
+    rails:
+      input:
+        flows:
+          - check boston weather
+
+  rails.co: |
+    define subflow check boston weather
+      $boston_temperature = execute check_boston_weather
+      if $boston_temperature < 0
+        bot inform too cold
+        stop
+    
+    define bot inform too cold
+      "It's too cold in Boston to talk right now 🥶"
+
+  actions.py: |
+    import aiohttp
+    from nemoguardrails.actions import action
+
+    @action()
+    async def check_boston_weather():
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": 42.36,
+            "longitude": -71.06,
+            "current": "temperature_2m,weather_code",
+            "temperature_unit": "celsius",
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status != 200:
+                        return str(resp.content)
+                    data = await resp.json()
+                    return int(data["current"]["temperature_2m"])
+        except Exception:
+            return 0
+---
+# Then create the NemoGuardrails resource
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: NemoGuardrails
+metadata:
+  name: nemoguardrails-banking
+  annotations:
+    security.opendatahub.io/enable-auth: 'true'
+spec:
+  nemoConfigs:
+    - name: main-config
+      configMaps:
+        - nemo-config-main
+      default: true
+    - name: weather-config
+      configMaps:
+        - nemo-config-weather
+      default: true
+  env:
+    - name: "OPENAI_API_KEY"
+      value: "null"
